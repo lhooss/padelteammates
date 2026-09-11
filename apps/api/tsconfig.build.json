@@ -1,0 +1,10 @@
+{
+  // Build de production : @padelteammates/shared est resolu sur son build (dist),
+  // pas sur ses sources (voir tsconfig.json).
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "include": ["src/**/*.ts"]
+}

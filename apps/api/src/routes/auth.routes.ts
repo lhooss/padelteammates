@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { validate } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/auth.js';
-import { loginSchema, registerSchema, updateProfileSchema } from '../schemas/auth.schema.js';
+import { loginSchema, registerSchema, updateProfileSchema } from '@padelteammates/shared';
 import * as authService from '../services/auth.service.js';
 
 export const authRouter = Router();

@@ -1,5 +1,5 @@
 import type { Prisma, Team } from '@prisma/client';
-import type { SubmitScoreInput } from '../schemas/score.schema.js';
+import type { SubmitScoreInput } from '@padelteammates/shared';
 
 export interface ComputedResult {
   gamesPlayed: number;

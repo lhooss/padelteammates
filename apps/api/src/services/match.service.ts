@@ -1,7 +1,7 @@
 import { prisma } from '../config/prisma.js';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../utils/errors.js';
 import { notify, notifyMany } from './notification.service.js';
-import type { CreateMatchInput } from '../schemas/match.schema.js';
+import type { CreateMatchInput } from '@padelteammates/shared';
 
 const MATCH_INCLUDE = {
   club: true,

@@ -1,6 +1,8 @@
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  // Resout @padelteammates/shared sur ses sources TS (pas besoin de le builder).
+  resolve: { conditions: ['@padelteammates/source'] },
   test: {
     environment: 'node',
     globals: true,

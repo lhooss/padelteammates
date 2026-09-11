@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { validate } from '../middleware/validate.js';
 import { requireAdmin, requireAuth } from '../middleware/auth.js';
-import { createClubSchema, updateClubSchema } from '../schemas/club.schema.js';
+import { createClubSchema, updateClubSchema } from '@padelteammates/shared';
 import * as clubService from '../services/club.service.js';
 
 export const clubRouter = Router();

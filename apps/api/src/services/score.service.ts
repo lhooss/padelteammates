@@ -5,7 +5,7 @@ import { slotEnd } from '../utils/slot.js';
 import { applyStats, computeResult } from './stats.service.js';
 import { notifyMany } from './notification.service.js';
 import { clearActive, markActive, withMatchLock } from './activeMatch.service.js';
-import type { SubmitScoreInput } from '../schemas/score.schema.js';
+import type { SubmitScoreInput } from '@padelteammates/shared';
 
 type Roster = { A: string[]; B: string[] };
 

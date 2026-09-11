@@ -1,48 +1,23 @@
 {
   "name": "padelteammates",
   "version": "0.1.0",
-  "description": "Padel App v0 - API backend (planification de matchs, validation de scores, stats communautaires a Kenitra)",
-  "type": "module",
-  "main": "dist/server.js",
+  "private": true,
+  "description": "Padel App v0 - monorepo : API backend, app mobile (a venir) et schemas partages",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "build": "tsc -p tsconfig.json",
-    "start": "node dist/server.js",
-    "typecheck": "tsc --noEmit",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:deploy": "prisma migrate deploy",
-    "prisma:studio": "prisma studio",
-    "seed": "tsx prisma/seed.ts",
-    "test": "vitest run",
-    "test:watch": "vitest"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
-  },
-  "dependencies": {
-    "@prisma/client": "^5.22.0",
-    "bcryptjs": "^2.4.3",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "helmet": "^8.0.0",
-    "ioredis": "^5.4.2",
-    "jsonwebtoken": "^9.0.2",
-    "zod": "^3.24.1"
-  },
-  "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
-    "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
-    "@types/jsonwebtoken": "^9.0.7",
-    "@types/node": "^22.10.5",
-    "@types/supertest": "^6.0.2",
-    "prisma": "^5.22.0",
-    "supertest": "^7.0.0",
-    "tsx": "^4.19.2",
-    "typescript": "^5.7.3",
-    "vitest": "^2.1.8"
+    "dev": "npm run dev -w @padelteammates/api",
+    "build": "npm run build -w @padelteammates/shared && npm run build -w @padelteammates/api",
+    "start": "npm run start -w @padelteammates/api",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present --",
+    "prisma:generate": "npm run prisma:generate -w @padelteammates/api",
+    "prisma:migrate": "npm run prisma:migrate -w @padelteammates/api --",
+    "prisma:deploy": "npm run prisma:deploy -w @padelteammates/api",
+    "prisma:studio": "npm run prisma:studio -w @padelteammates/api",
+    "seed": "npm run seed -w @padelteammates/api"
   },
   "engines": {
     "node": ">=20"

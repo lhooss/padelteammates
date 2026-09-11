@@ -2,7 +2,7 @@ import { prisma } from '../config/prisma.js';
 import { hashPassword, verifyPassword } from '../utils/password.js';
 import { signToken } from '../utils/jwt.js';
 import { ConflictError, UnauthorizedError } from '../utils/errors.js';
-import type { LoginInput, RegisterInput, UpdateProfileInput } from '../schemas/auth.schema.js';
+import type { LoginInput, RegisterInput, UpdateProfileInput } from '@padelteammates/shared';
 
 const PUBLIC_USER_SELECT = {
   id: true,

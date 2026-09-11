@@ -1,5 +1,5 @@
 import { prisma } from '../config/prisma.js';
-import type { CreateClubInput, UpdateClubInput } from '../schemas/club.schema.js';
+import type { CreateClubInput, UpdateClubInput } from '@padelteammates/shared';
 
 // NB: la restriction "admin uniquement" est appliquee au niveau des routes
 // (middleware requireAdmin). Le service se concentre sur la persistance.

@@ -1,0 +1,11 @@
+{
+  // Typecheck + editeur : @padelteammates/shared est resolu sur ses sources TS
+  // (condition d'export "@padelteammates/source"), sans build prealable.
+  // Le build de production utilise tsconfig.build.json.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "customConditions": ["@padelteammates/source"],
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts"]
+}

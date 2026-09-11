@@ -5,10 +5,10 @@ import { requireAuth } from '../middleware/auth.js';
 import {
   createMatchSchema,
   respondInviteSchema,
+  submitScoreSchema,
   weeklyCalendarSchema,
   type WeeklyCalendarInput,
-} from '../schemas/match.schema.js';
-import { submitScoreSchema } from '../schemas/score.schema.js';
+} from '@padelteammates/shared';
 import * as matchService from '../services/match.service.js';
 import * as scoreService from '../services/score.service.js';
 
