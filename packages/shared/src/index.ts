@@ -4,3 +4,4 @@ export * from './auth.schema.js';
 export * from './club.schema.js';
 export * from './match.schema.js';
 export * from './score.schema.js';
+export * from './user.schema.js';

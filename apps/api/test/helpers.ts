@@ -6,7 +6,7 @@ import { redis } from '../src/config/redis.js';
 // Vide toutes les tables entre les tests (isolation).
 export async function resetDb(): Promise<void> {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE TABLE "Notification","Score","Participant","Match","Club","User" RESTART IDENTITY CASCADE;',
+    'TRUNCATE TABLE "Notification","Score","Participant","Match","Club","Friendship","User" RESTART IDENTITY CASCADE;',
   );
   await redis.flushdb();
 }
@@ -50,6 +50,12 @@ export async function registerAdmin(app: Express): Promise<TestUser> {
     .send({ email: user.email, password: 'password123' })
     .expect(200);
   return { ...user, token: res.body.token };
+}
+
+// Rend deux joueurs amis via l'API (demande de `a`, acceptee par `b`).
+export async function makeFriends(app: Express, a: TestUser, b: TestUser): Promise<void> {
+  await request(app).post(`/api/friends/${b.id}`).set('Authorization', auth(a.token)).expect(201);
+  await request(app).post(`/api/friends/${a.id}/accept`).set('Authorization', auth(b.token)).expect(200);
 }
 
 export function auth(token: string): string {

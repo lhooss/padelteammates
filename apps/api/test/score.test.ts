@@ -4,6 +4,7 @@ import { createApp } from '../src/app.js';
 import {
   auth,
   dayFromToday,
+  makeFriends,
   moveMatchToPast,
   registerAdmin,
   registerUser,
@@ -42,6 +43,8 @@ async function setupMatch({ played = true, unconfirmed = [] }: SetupOptions = {}
     await registerUser(app, { email: 'l1@example.com', profilePublic: false }),
     await registerUser(app, { email: 'l2@example.com', profilePublic: false }),
   ];
+  // p1 invite ses amis p2, p3 et p4.
+  for (const other of p.slice(1)) await makeFriends(app, p[0]!, other);
 
   const match = await request(app)
     .post('/api/matches')
@@ -130,10 +133,10 @@ describe('Scores — saisie, validation, stats', () => {
     expect(stats.body.losses).toBe(0);
     expect(stats.body.winRate).toBe(100);
 
-    // Perdant p3 -> profil prive -> 403.
+    // Perdant p3 -> profil prive, et p2 n'est pas son ami -> 403.
     await request(app)
       .get(`/api/users/${p[2]!.id}/stats`)
-      .set('Authorization', auth(p[0]!.token))
+      .set('Authorization', auth(p[1]!.token))
       .expect(403);
   });
 

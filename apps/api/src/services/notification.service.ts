@@ -1,7 +1,13 @@
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 
-type NotificationType = 'INVITE' | 'SCORE_ENTERED' | 'SCORE_VALIDATED' | 'MATCH_COMPLETED';
+type NotificationType =
+  | 'INVITE'
+  | 'SCORE_ENTERED'
+  | 'SCORE_VALIDATED'
+  | 'MATCH_COMPLETED'
+  | 'FRIEND_REQUEST'
+  | 'FRIEND_ACCEPTED';
 
 interface CreateNotificationArgs {
   userId: string;

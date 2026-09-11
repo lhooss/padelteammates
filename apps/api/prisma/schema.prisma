@@ -47,8 +47,35 @@ model User {
   participations Participant[]
   notifications  Notification[]
 
+  friendRequestsSent     Friendship[] @relation("FriendRequestsSent")
+  friendRequestsReceived Friendship[] @relation("FriendRequestsReceived")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+enum FriendshipStatus {
+  PENDING // demande envoyee, en attente de reponse
+  ACCEPTED // amis (relation symetrique)
+}
+
+// Amitie entre deux joueurs, creee par le demandeur. Le service garantit une seule
+// ligne par paire, dans les deux sens. On n'invite a un match que ses amis (ACCEPTED).
+model Friendship {
+  id     String           @id @default(cuid())
+  status FriendshipStatus @default(PENDING)
+
+  requesterId String
+  requester   User   @relation("FriendRequestsSent", fields: [requesterId], references: [id], onDelete: Cascade)
+
+  addresseeId String
+  addressee   User   @relation("FriendRequestsReceived", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([requesterId, addresseeId])
+  @@index([addresseeId, status])
 }
 
 model Club {

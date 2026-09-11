@@ -1,7 +1,16 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../src/app.js';
-import { auth, dayFromToday, registerAdmin, registerUser, resetDb, teardown, type TestUser } from './helpers.js';
+import {
+  auth,
+  dayFromToday,
+  makeFriends,
+  registerAdmin,
+  registerUser,
+  resetDb,
+  teardown,
+  type TestUser,
+} from './helpers.js';
 
 const app = createApp();
 const MATCH_DAY = dayFromToday(7);
@@ -19,13 +28,16 @@ async function seedClub(): Promise<string> {
   return res.body.id as string;
 }
 
+// p1 est ami avec p2, p3 et p4 : on n'invite que ses amis.
 async function fourPlayers(): Promise<[TestUser, TestUser, TestUser, TestUser]> {
-  return [
+  const p: [TestUser, TestUser, TestUser, TestUser] = [
     await registerUser(app, { email: 'p1@example.com' }),
     await registerUser(app, { email: 'p2@example.com' }),
     await registerUser(app, { email: 'p3@example.com' }),
     await registerUser(app, { email: 'p4@example.com' }),
   ];
+  for (const other of p.slice(1)) await makeFriends(app, p[0], other);
+  return p;
 }
 
 function createMatchBody(clubId: string, p: TestUser[]) {
@@ -73,8 +85,9 @@ describe('Matchs — planification & invitations', () => {
       .get('/api/notifications?unread=true')
       .set('Authorization', auth(p[1].token))
       .expect(200);
-    expect(notifs.body).toHaveLength(1);
-    expect(notifs.body[0].type).toBe('INVITE');
+    // (p2 a aussi recu la demande d'ami de p1.)
+    const invites = notifs.body.filter((n: { type: string }) => n.type === 'INVITE');
+    expect(invites).toHaveLength(1);
   });
 
   it('un invite peut confirmer sa participation', async () => {

@@ -1,5 +1,6 @@
 import { prisma } from '../config/prisma.js';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../utils/errors.js';
+import { friendIds } from './friendship.service.js';
 import { notify, notifyMany } from './notification.service.js';
 import type { CreateMatchInput } from '@padelteammates/shared';
 
@@ -46,6 +47,12 @@ export async function createMatch(creatorId: string, input: CreateMatchInput) {
     const found = await prisma.user.count({ where: { id: { in: inviteeIds } } });
     if (found !== inviteeIds.length) {
       throw new BadRequestError('Un ou plusieurs joueurs invites sont introuvables');
+    }
+
+    // On n'invite que ses amis (demande d'ami acceptee).
+    const friends = await friendIds(creatorId);
+    if (inviteeIds.some((id) => !friends.has(id))) {
+      throw new ForbiddenError('Vous ne pouvez inviter que vos amis');
     }
   }
 
