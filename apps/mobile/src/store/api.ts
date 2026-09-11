@@ -13,6 +13,7 @@ import type {
   CreateMatchRequest,
   FriendRequests,
   FriendshipState,
+  JoinRequest,
   Match,
   PlayerProfile,
   PlayerSearchResult,
@@ -107,6 +108,21 @@ export const api = createApi({
       invalidatesTags: ['Match'],
     }),
 
+    // Demandes pour rejoindre : demander une place, accepter (organisateur),
+    // refuser (organisateur) ou annuler (demandeur).
+    requestToJoin: build.mutation<JoinRequest, { matchId: string; team: Team }>({
+      query: ({ matchId, team }) => ({ url: `/matches/${matchId}/join-requests`, method: 'POST', body: { team } }),
+      invalidatesTags: ['Match'],
+    }),
+    acceptJoinRequest: build.mutation<Match, { matchId: string; userId: string }>({
+      query: ({ matchId, userId }) => ({ url: `/matches/${matchId}/join-requests/${userId}/accept`, method: 'POST' }),
+      invalidatesTags: ['Match'],
+    }),
+    removeJoinRequest: build.mutation<void, { matchId: string; userId: string }>({
+      query: ({ matchId, userId }) => ({ url: `/matches/${matchId}/join-requests/${userId}`, method: 'DELETE' }),
+      invalidatesTags: ['Match'],
+    }),
+
     // Saisie (ou correction) du score : compte comme la validation de son equipe.
     submitScore: build.mutation<Score, { matchId: string; body: ScoreDetail }>({
       query: ({ matchId, body }) => ({ url: `/matches/${matchId}/score`, method: 'POST', body }),
@@ -161,6 +177,9 @@ export const {
   useCreateMatchMutation,
   useInvitePlayersMutation,
   useRespondInviteMutation,
+  useRequestToJoinMutation,
+  useAcceptJoinRequestMutation,
+  useRemoveJoinRequestMutation,
   useSubmitScoreMutation,
   useValidateScoreMutation,
   useSearchPlayersQuery,

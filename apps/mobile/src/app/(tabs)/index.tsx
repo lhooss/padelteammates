@@ -5,6 +5,7 @@ import { ScrollView, SectionList, StyleSheet, View } from 'react-native';
 import type { Match } from '@/api/types';
 import { Button } from '@/components/button';
 import { Chip } from '@/components/chip';
+import { JoinMatchActions } from '@/components/join-match-actions';
 import { MatchCard } from '@/components/match-card';
 import { QueryState } from '@/components/query-state';
 import { Screen } from '@/components/screen';
@@ -15,7 +16,8 @@ import { addDays, formatDay, formatWeek, mondayOf, toIsoDay } from '@/lib/dates'
 import { isParticipant } from '@/lib/matches';
 import { useClubsQuery, useMeQuery, useWeeklyCalendarQuery } from '@/store/api';
 
-// Calendrier global de la communaute, semaine par semaine (lundi -> dimanche), filtrable par club.
+// Calendrier global de la communaute, semaine par semaine (lundi -> dimanche), filtrable
+// par club. On peut y demander a rejoindre un match qui a des places libres.
 export default function CalendarScreen() {
   const [monday, setMonday] = useState(() => mondayOf(new Date()));
   const [clubId, setClubId] = useState<string | undefined>(undefined);
@@ -78,7 +80,9 @@ export default function CalendarScreen() {
           </ThemedText>
         )}
         renderItem={({ item }) => (
-          <MatchCard match={item} meId={me?.id} showDate={false} highlight={isParticipant(item, me?.id)} />
+          <MatchCard match={item} meId={me?.id} showDate={false} highlight={isParticipant(item, me?.id)}>
+            {me ? <JoinMatchActions match={item} meId={me.id} /> : null}
+          </MatchCard>
         )}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         ListEmptyComponent={

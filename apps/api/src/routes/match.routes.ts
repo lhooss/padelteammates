@@ -5,11 +5,13 @@ import { requireAuth } from '../middleware/auth.js';
 import {
   addInvitesSchema,
   createMatchSchema,
+  joinRequestSchema,
   respondInviteSchema,
   submitScoreSchema,
   weeklyCalendarSchema,
   type WeeklyCalendarInput,
 } from '@padelteammates/shared';
+import * as joinRequestService from '../services/joinRequest.service.js';
 import * as matchService from '../services/match.service.js';
 import * as scoreService from '../services/score.service.js';
 
@@ -24,7 +26,7 @@ matchRouter.get(
   asyncHandler(async (req, res) => {
     const q = getValidated<WeeklyCalendarInput>(req, 'query');
     const ref = q.from ?? new Date();
-    res.json(await matchService.weeklyCalendar(ref, q.clubId));
+    res.json(await matchService.weeklyCalendar(req.auth!.userId, ref, q.clubId));
   }),
 );
 
@@ -71,6 +73,34 @@ matchRouter.post(
   }),
 );
 
+// --- Demandes pour rejoindre (depuis le calendrier) ---
+
+// Demander une place libre dans une equipe.
+matchRouter.post(
+  '/:id/join-requests',
+  validate(joinRequestSchema),
+  asyncHandler(async (req, res) => {
+    res.status(201).json(await joinRequestService.requestToJoin(req.auth!.userId, req.params.id!, req.body.team));
+  }),
+);
+
+// L'organisateur accepte la demande de ce joueur.
+matchRouter.post(
+  '/:id/join-requests/:userId/accept',
+  asyncHandler(async (req, res) => {
+    res.json(await joinRequestService.acceptJoinRequest(req.auth!.userId, req.params.id!, req.params.userId!));
+  }),
+);
+
+// Refus par l'organisateur, ou annulation par le joueur.
+matchRouter.delete(
+  '/:id/join-requests/:userId',
+  asyncHandler(async (req, res) => {
+    await joinRequestService.removeJoinRequest(req.auth!.userId, req.params.id!, req.params.userId!);
+    res.status(204).send();
+  }),
+);
+
 matchRouter.delete(
   '/:id',
   asyncHandler(async (req, res) => {
@@ -98,7 +128,7 @@ matchRouter.post(
   }),
 );
 
-// Validation du resultat (verrouillage a >= 2 validations).
+// Validation du resultat (verrouillage des qu'un joueur de chaque equipe a valide).
 matchRouter.post(
   '/:id/score/validate',
   asyncHandler(async (req, res) => {

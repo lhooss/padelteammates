@@ -49,6 +49,7 @@ model User {
 
   friendRequestsSent     Friendship[] @relation("FriendRequestsSent")
   friendRequestsReceived Friendship[] @relation("FriendRequestsReceived")
+  joinRequests           JoinRequest[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -105,6 +106,7 @@ model Match {
 
   participants Participant[]
   score        Score?
+  joinRequests JoinRequest[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -113,6 +115,25 @@ model Match {
   // sur le meme jour + creneau.
   @@unique([clubId, date, slot])
   @@index([date])
+}
+
+// Demande d'un joueur pour rejoindre un match (depuis le calendrier), dans une equipe
+// ayant une place libre. Supprimee a l'acceptation (le joueur devient participant),
+// au refus ou a l'annulation.
+model JoinRequest {
+  id   String @id @default(cuid())
+  team Team
+
+  matchId String
+  match   Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([matchId, userId])
+  @@index([userId])
 }
 
 model Participant {

@@ -3,6 +3,8 @@ import { Alert, SectionList, StyleSheet, View } from 'react-native';
 
 import type { Match } from '@/api/types';
 import { Button } from '@/components/button';
+import { JoinMatchActions } from '@/components/join-match-actions';
+import { JoinRequestsList } from '@/components/join-requests-list';
 import { MatchCard } from '@/components/match-card';
 import { QueryState } from '@/components/query-state';
 import { ScoreActions } from '@/components/score-actions';
@@ -10,10 +12,11 @@ import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { BottomTabInset, Spacing } from '@/constants/theme';
 import { errorMessage } from '@/lib/api-error';
-import { canInvitePlayers, hasSlotEnded, isPendingInvitation, scoreAction } from '@/lib/matches';
+import { canInvitePlayers, hasSlotEnded, isParticipant, isPendingInvitation, needsMyAction } from '@/lib/matches';
 import { useMeQuery, useMyMatchesQuery, useRespondInviteMutation } from '@/store/api';
 
-// Mes matchs : invitations et scores a traiter, matchs a venir, matchs termines.
+// Mes matchs : invitations, actions a traiter (scores, demandes pour rejoindre),
+// mes demandes envoyees, matchs a venir et termines.
 export default function MyMatchesScreen() {
   const { data: me } = useMeQuery();
   const { data, isLoading, isFetching, error, refetch } = useMyMatchesQuery();
@@ -45,19 +48,19 @@ export default function MyMatchesScreen() {
     );
   }
 
+  const playing = data.filter((m) => isParticipant(m, me.id));
   const isInvited = (m: Match) => isPendingInvitation(m, me.id);
-  const needsScore = (m: Match) => {
-    const action = scoreAction(m, me.id);
-    return action === 'enter' || action === 'validate';
-  };
+  const toHandle = (m: Match) => !isInvited(m) && needsMyAction(m, me.id);
   const sections = [
-    { title: 'Invitations', data: data.filter(isInvited) },
-    { title: 'Scores à saisir ou valider', data: data.filter(needsScore) },
+    { title: 'Invitations', data: playing.filter(isInvited) },
+    { title: 'À traiter : scores et demandes', data: playing.filter(toHandle) },
+    // Matchs ou je ne joue pas encore : mes demandes pour rejoindre.
+    { title: 'Mes demandes pour rejoindre', data: data.filter((m) => !isParticipant(m, me.id)) },
     {
       title: 'À venir',
-      data: data.filter((m) => m.status !== 'COMPLETED' && !isInvited(m) && !needsScore(m)),
+      data: playing.filter((m) => m.status !== 'COMPLETED' && !isInvited(m) && !toHandle(m)),
     },
-    { title: 'Terminés', data: data.filter((m) => m.status === 'COMPLETED') },
+    { title: 'Terminés', data: playing.filter((m) => m.status === 'COMPLETED') },
   ].filter((s) => s.data.length > 0);
 
   return (
@@ -91,6 +94,8 @@ export default function MyMatchesScreen() {
               </View>
             ) : null}
             <ScoreActions match={item} meId={me.id} />
+            <JoinRequestsList match={item} meId={me.id} />
+            <JoinMatchActions match={item} meId={me.id} />
             {canInvitePlayers(item, me.id) && !hasSlotEnded(item) ? (
               <Button
                 title="Inviter des joueurs"
@@ -103,7 +108,8 @@ export default function MyMatchesScreen() {
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         ListEmptyComponent={
           <ThemedText themeColor="textSecondary" style={styles.empty}>
-            Vous n'avez encore aucun match. Planifiez-en un et invitez vos amis.
+            Vous n'avez encore aucun match. Planifiez-en un, ou demandez à rejoindre un match depuis le
+            calendrier.
           </ThemedText>
         }
         refreshing={isFetching && !isLoading}

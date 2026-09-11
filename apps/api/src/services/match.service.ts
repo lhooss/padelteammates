@@ -1,3 +1,4 @@
+import type { MatchStatus } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../utils/errors.js';
 import { slotEnd } from '../utils/slot.js';
@@ -5,12 +6,19 @@ import { friendIds } from './friendship.service.js';
 import { notify, notifyMany } from './notification.service.js';
 import type { AddInvitesInput, CreateMatchInput } from '@padelteammates/shared';
 
+const PLAYER_SELECT = { id: true, name: true } as const;
+
 const MATCH_INCLUDE = {
   club: true,
   participants: {
-    include: { user: { select: { id: true, name: true } } },
+    include: { user: { select: PLAYER_SELECT } },
   },
   score: true,
+  // Demandes pour rejoindre en attente (a traiter par l'organisateur).
+  joinRequests: {
+    include: { user: { select: PLAYER_SELECT } },
+    orderBy: { createdAt: 'asc' },
+  },
 } as const;
 
 // Normalise une date sur minuit UTC (le jour du match, sans l'heure).
@@ -51,7 +59,7 @@ async function assertCanInvite(organizerId: string, inviteeIds: string[]): Promi
 
 // Conflit de creneau cote joueurs : aucun ne doit deja jouer ce jour + creneau
 // dans un autre match non termine.
-async function assertNoSlotClash(userIds: string[], day: Date, slot: string): Promise<void> {
+export async function assertNoSlotClash(userIds: string[], day: Date, slot: string): Promise<void> {
   const clash = await prisma.participant.findFirst({
     where: {
       userId: { in: userIds },
@@ -61,6 +69,14 @@ async function assertNoSlotClash(userIds: string[], day: Date, slot: string): Pr
   });
   if (clash) {
     throw new ConflictError('Un joueur a deja un match sur ce creneau');
+  }
+}
+
+// Un match accepte de nouveaux joueurs (invitation ou demande pour rejoindre)
+// tant qu'il est planifie et que son creneau n'est pas passe.
+export function assertOpenForNewPlayers(match: { status: MatchStatus; date: Date; slot: string }): void {
+  if (match.status !== 'PLANNED' || Date.now() >= slotEnd(match.date, match.slot).getTime()) {
+    throw new BadRequestError('Ce match n\'accepte plus de nouveaux joueurs');
   }
 }
 
@@ -131,9 +147,7 @@ export async function invitePlayers(userId: string, matchId: string, input: AddI
   if (match.createdById !== userId) {
     throw new ForbiddenError('Seul l\'organisateur peut inviter des joueurs');
   }
-  if (match.status !== 'PLANNED' || Date.now() >= slotEnd(match.date, match.slot).getTime()) {
-    throw new BadRequestError('Ce match n\'accepte plus de nouveaux joueurs');
-  }
+  assertOpenForNewPlayers(match);
 
   const inviteeIds = input.invites.map((i) => i.userId);
   if (match.participants.some((p) => inviteeIds.includes(p.userId))) {
@@ -159,6 +173,8 @@ export async function invitePlayers(userId: string, matchId: string, input: AddI
         presenceStatus: 'INVITED' as const,
       })),
     });
+    // Un invite qui avait demande a rejoindre ce match n'a plus besoin de sa demande.
+    await tx.joinRequest.deleteMany({ where: { matchId, userId: { in: inviteeIds } } });
     await notifyMany(
       inviteeIds,
       { type: 'INVITE', message: inviteMessage(match.date, match.slot, match.club.name), matchId },
@@ -213,16 +229,20 @@ export async function getMatch(matchId: string) {
   return match;
 }
 
+// Mes matchs : ceux ou je joue (ou suis invite) et ceux que j'ai demande a rejoindre.
 export function listMyMatches(userId: string) {
   return prisma.match.findMany({
-    where: { participants: { some: { userId } } },
+    where: {
+      OR: [{ participants: { some: { userId } } }, { joinRequests: { some: { userId } } }],
+    },
     include: MATCH_INCLUDE,
     orderBy: { date: 'desc' },
   });
 }
 
-// Calendrier hebdomadaire global de la communaute.
-export function weeklyCalendar(ref: Date, clubId?: string) {
+// Calendrier hebdomadaire global de la communaute. Chacun n'y voit que sa propre
+// demande pour rejoindre : les autres restent entre leur auteur et l'organisateur.
+export function weeklyCalendar(viewerId: string, ref: Date, clubId?: string) {
   const { start, end } = weekBounds(ref);
   return prisma.match.findMany({
     where: {
@@ -231,7 +251,8 @@ export function weeklyCalendar(ref: Date, clubId?: string) {
     },
     include: {
       club: true,
-      participants: { include: { user: { select: { id: true, name: true } } } },
+      participants: { include: { user: { select: PLAYER_SELECT } } },
+      joinRequests: { where: { userId: viewerId }, include: { user: { select: PLAYER_SELECT } } },
     },
     orderBy: [{ date: 'asc' }, { slot: 'asc' }],
   });

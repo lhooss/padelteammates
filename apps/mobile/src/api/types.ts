@@ -101,6 +101,16 @@ export interface CreateMatchRequest {
   invites: { userId: string; team: Team }[];
 }
 
+// Demande d'un joueur pour rejoindre un match, en attente de l'organisateur.
+export interface JoinRequest {
+  id: string;
+  matchId: string;
+  userId: string;
+  team: Team;
+  createdAt: string;
+  user: PlayerSummary;
+}
+
 export interface Match {
   id: string;
   date: string; // jour du match, minuit UTC
@@ -111,4 +121,5 @@ export interface Match {
   club: Club;
   participants: Participant[];
   score?: Score | null; // absent du calendrier
+  joinRequests?: JoinRequest[]; // dans le calendrier : seulement la mienne
 }

@@ -7,7 +7,10 @@ type NotificationType =
   | 'SCORE_VALIDATED'
   | 'MATCH_COMPLETED'
   | 'FRIEND_REQUEST'
-  | 'FRIEND_ACCEPTED';
+  | 'FRIEND_ACCEPTED'
+  | 'JOIN_REQUEST'
+  | 'JOIN_ACCEPTED'
+  | 'JOIN_DECLINED';
 
 interface CreateNotificationArgs {
   userId: string;

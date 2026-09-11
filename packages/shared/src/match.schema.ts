@@ -69,6 +69,11 @@ export const addInvitesSchema = z
     'Invitations en double detectees',
   );
 
+// Demande pour rejoindre un match depuis le calendrier : equipe souhaitee (place libre).
+export const joinRequestSchema = z.object({
+  team: teamSchema,
+});
+
 // Filtre du calendrier hebdomadaire: date de reference (defaut = semaine courante).
 export const weeklyCalendarSchema = z.object({
   from: z.coerce.date().optional(),

@@ -47,8 +47,8 @@ npm run mobile    # serveur Expo : scanner le QR code avec Expo Go (SDK 57)
 - Le téléphone et le PC doivent être sur le **même Wi-Fi**. L'app joint l'API automatiquement sur l'IP du PC qui lance Expo, port `3001` ; pour viser une autre API, définir `EXPO_PUBLIC_API_URL` dans `apps/mobile/.env` (voir `.env.example`).
 - Sous Windows, autoriser Node.js dans le pare-feu pour les ports d'Expo (`8081` par défaut, `--port` sinon) et `3001` (API).
 - Écrans :
-  - **Calendrier** de la semaine de la communauté, filtrable par club ; mes matchs sont mis en avant.
-  - **Mes matchs** : invitations à accepter ou refuser, scores à saisir ou valider (badge sur l'onglet), à venir, terminés avec leur score.
+  - **Calendrier** de la semaine de la communauté, filtrable par club ; mes matchs sont mis en avant ; « Rejoindre l'équipe A / B » sur les matchs qui ont des places libres.
+  - **Mes matchs** : invitations à accepter ou refuser, scores à saisir ou valider et demandes pour rejoindre à traiter (badge sur l'onglet), mes demandes envoyées, à venir, terminés avec leur score.
   - **Score du match** (à l'issue du créneau) : composition finale 2 contre 2, sets de chaque partie, résultat calculé en direct (même calcul que l'API, `computeResult` de `packages/shared`) ; l'équipe adverse valide ou corrige.
   - **Amis** : recherche de joueurs par nom, demandes reçues / envoyées (badge), liste d'amis.
   - **Profil d'un joueur** (en touchant son nom) : relation d'amitié, stats si visibles.
@@ -70,7 +70,7 @@ Suite d'intégration **Vitest + Supertest** contre une vraie base Postgres/Redis
 
 ```bash
 docker compose up -d          # infra requise
-npm test                      # 40 tests: auth, clubs, amis, matchs, scores/validation/stats, creneaux
+npm test                      # 45 tests: auth, clubs, amis, matchs, demandes pour rejoindre, scores/validation/stats, creneaux
 ```
 
 Le `apps/api/test/global-setup.ts` synchronise le schéma (`prisma db push`) et chaque test repart d'une base vide. Un fichier **`apps/api/requests.http`** (REST Client) déroule le parcours complet à la main.
@@ -94,6 +94,7 @@ La CI (GitHub Actions) rejoue à chaque push : typecheck de tous les workspaces,
 - **Admin uniquement** pour créer/modifier les clubs (`requireAdmin`).
 - **Amis** : une demande d'ami est acceptée ou refusée par le destinataire ; deux demandes croisées valent acceptation. On peut annuler sa demande ou retirer un ami.
 - **Planification** : un joueur crée un match (club + créneau) et **n'invite que ses amis** ; les invités confirment ou déclinent. L'organisateur peut ensuite **compléter les places libres** (2 joueurs max par équipe) tant que le match est planifié et que son créneau n'est pas passé.
+- **Demander à rejoindre** : depuis le calendrier, n'importe quel joueur peut demander une place libre dans l'équipe de son choix ; l'organisateur accepte (le joueur rejoint le match, déjà confirmé) ou refuse, et le joueur peut annuler sa demande. Mêmes conditions que les invitations : match planifié, créneau pas passé, pas de conflit de créneau.
 - **Anti-conflit de créneau** : contrainte `@@unique([clubId, date, slot])` + vérification qu'aucun joueur n'est déjà pris sur ce créneau.
 - **Calendrier hebdomadaire** global (lundi→dimanche) consultable par tous, filtrable par club.
 - **Saisie du résultat** par n'importe quel participant **confirmé**, uniquement **à l'issue du créneau** (heure de Kénitra, `Africa/Casablanca`). Composition finale **2 contre 2** reprenant les 4 joueurs confirmés, games et sets — validée par Zod.
@@ -113,6 +114,9 @@ La CI (GitHub Actions) rejoue à chaque push : typecheck de tous les workspaces,
 | POST | `/api/matches` | Créer un match + inviter des amis |
 | POST | `/api/matches/:id/respond` | Accepter/décliner une invitation |
 | POST | `/api/matches/:id/invites` | Inviter des amis dans les places libres (organisateur) |
+| POST | `/api/matches/:id/join-requests` | Demander à rejoindre un match (`{ team }`, place libre) |
+| POST | `/api/matches/:id/join-requests/:userId/accept` | Accepter une demande (organisateur) : le joueur rejoint le match, confirmé |
+| DELETE | `/api/matches/:id/join-requests/:userId` | Refuser (organisateur) ou annuler sa demande (joueur) |
 | GET | `/api/matches/calendar/weekly` | Calendrier hebdomadaire (`?from=&clubId=`) |
 | GET | `/api/matches/mine` | Mes matchs |
 | POST | `/api/matches/:id/score` | Saisir le résultat (= validation de son équipe) |

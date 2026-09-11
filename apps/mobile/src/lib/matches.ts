@@ -1,4 +1,4 @@
-import type { Match, Score, Team } from '@/api/types';
+import type { JoinRequest, Match, Score, Team } from '@/api/types';
 
 export function isParticipant(match: Match, meId: string | undefined): boolean {
   return meId !== undefined && match.participants.some((p) => p.userId === meId);
@@ -33,6 +33,33 @@ export function hasSlotEnded(match: Match, now = new Date()): boolean {
   return now.getTime() >= end.getTime();
 }
 
+// --- Demandes pour rejoindre ---
+
+// Ma demande en attente pour ce match.
+export function myJoinRequest(match: Match, meId: string): JoinRequest | undefined {
+  return match.joinRequests?.find((r) => r.userId === meId);
+}
+
+// Je peux demander a rejoindre : je n'y participe pas, pas de demande en cours,
+// match planifie dont le creneau n'est pas termine, avec au moins une place libre.
+export function canRequestToJoin(match: Match, meId: string): boolean {
+  const spots = freeSpots(match);
+  return (
+    !isParticipant(match, meId) &&
+    !myJoinRequest(match, meId) &&
+    match.status === 'PLANNED' &&
+    !hasSlotEnded(match) &&
+    spots.A + spots.B > 0
+  );
+}
+
+// Demandes a accepter ou refuser, pour l'organisateur.
+export function joinRequestsToAnswer(match: Match, meId: string): JoinRequest[] {
+  return match.createdById === meId && match.status === 'PLANNED' ? (match.joinRequests ?? []) : [];
+}
+
+// --- Score ---
+
 // Equipe d'un joueur dans la composition finale saisie.
 export function teamInScore(score: Score, userId: string): Team | undefined {
   if (score.setsDetail.teams.A.includes(userId)) return 'A';
@@ -61,4 +88,16 @@ export function scoreAction(match: Match, meId: string, now = new Date()): Score
     return validated ? 'waiting' : 'validate';
   }
   return null;
+}
+
+// Le match attend une action de ma part : repondre a une invitation, saisir ou valider
+// le score, ou (organisateur) traiter une demande pour rejoindre.
+export function needsMyAction(match: Match, meId: string): boolean {
+  const action = scoreAction(match, meId);
+  return (
+    isPendingInvitation(match, meId) ||
+    action === 'enter' ||
+    action === 'validate' ||
+    joinRequestsToAnswer(match, meId).length > 0
+  );
 }
