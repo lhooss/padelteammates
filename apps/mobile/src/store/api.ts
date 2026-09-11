@@ -8,6 +8,8 @@ import {
 import type {
   ChangeEmailInput,
   ChangePasswordInput,
+  FrmtCategory,
+  FrmtLinkInput,
   LoginInput,
   RegisterRequest,
   UpdateProfileRequest,
@@ -19,6 +21,11 @@ import type {
   CreateMatchRequest,
   FriendRequests,
   FriendshipState,
+  FrmtImportRun,
+  FrmtImportStatus,
+  FrmtPendingLink,
+  FrmtRankingEntry,
+  FrmtSummary,
   JoinRequest,
   Match,
   PlayerProfile,
@@ -56,11 +63,13 @@ const baseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> =
 
 // Toute action d'amitie change les listes d'amis et la relation affichee sur les profils.
 const FRIENDSHIP_TAGS = ['Friend', 'Player'] as const;
+// Un lien FRMT change mon profil, celui vu par les autres et les listes FRMT.
+const FRMT_LINK_TAGS = ['Me', 'Player', 'Frmt'] as const;
 
 export const api = createApi({
   reducerPath: 'api',
   baseQuery,
-  tagTypes: ['Me', 'Match', 'Club', 'Friend', 'Player'],
+  tagTypes: ['Me', 'Match', 'Club', 'Friend', 'Player', 'Frmt'],
   endpoints: (build) => ({
     login: build.mutation<AuthResponse, LoginInput>({
       query: (body) => ({ url: '/auth/login', method: 'POST', body }),
@@ -176,6 +185,41 @@ export const api = createApi({
       query: (userId) => ({ url: `/friends/${userId}`, method: 'DELETE' }),
       invalidatesTags: [...FRIENDSHIP_TAGS],
     }),
+
+    // --- Classement FRMT ---
+    frmtStatus: build.query<FrmtImportStatus, void>({
+      query: () => '/frmt/status',
+      providesTags: ['Frmt'],
+    }),
+    frmtSearch: build.query<FrmtRankingEntry[], { q: string; category?: FrmtCategory }>({
+      query: ({ q, category }) => ({ url: '/frmt/ranking', params: category ? { q, category } : { q } }),
+      providesTags: ['Frmt'],
+    }),
+    linkFrmt: build.mutation<FrmtSummary, FrmtLinkInput>({
+      query: (body) => ({ url: '/frmt/link', method: 'PUT', body }),
+      invalidatesTags: [...FRMT_LINK_TAGS],
+    }),
+    unlinkFrmt: build.mutation<void, void>({
+      query: () => ({ url: '/frmt/link', method: 'DELETE' }),
+      invalidatesTags: [...FRMT_LINK_TAGS],
+    }),
+    // Administration : demandes a valider, import immediat.
+    frmtPendingLinks: build.query<FrmtPendingLink[], void>({
+      query: () => '/frmt/links',
+      providesTags: ['Frmt'],
+    }),
+    verifyFrmtLink: build.mutation<FrmtSummary, string>({
+      query: (linkId) => ({ url: `/frmt/links/${linkId}/verify`, method: 'POST' }),
+      invalidatesTags: [...FRMT_LINK_TAGS],
+    }),
+    rejectFrmtLink: build.mutation<void, string>({
+      query: (linkId) => ({ url: `/frmt/links/${linkId}`, method: 'DELETE' }),
+      invalidatesTags: [...FRMT_LINK_TAGS],
+    }),
+    importFrmt: build.mutation<FrmtImportRun, void>({
+      query: () => ({ url: '/frmt/import', method: 'POST' }),
+      invalidatesTags: [...FRMT_LINK_TAGS],
+    }),
   }),
 });
 
@@ -205,4 +249,12 @@ export const {
   useSendFriendRequestMutation,
   useAcceptFriendRequestMutation,
   useRemoveFriendMutation,
+  useFrmtStatusQuery,
+  useFrmtSearchQuery,
+  useLinkFrmtMutation,
+  useUnlinkFrmtMutation,
+  useFrmtPendingLinksQuery,
+  useVerifyFrmtLinkMutation,
+  useRejectFrmtLinkMutation,
+  useImportFrmtMutation,
 } = api;

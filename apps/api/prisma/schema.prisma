@@ -58,6 +58,7 @@ model User {
   friendRequestsSent     Friendship[] @relation("FriendRequestsSent")
   friendRequestsReceived Friendship[] @relation("FriendRequestsReceived")
   joinRequests           JoinRequest[]
+  frmtLink               FrmtLink?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -216,4 +217,63 @@ model Notification {
   createdAt DateTime @default(now())
 
   @@index([userId, read])
+}
+
+// --- Classement national padel de la FRMT ---
+
+enum FrmtCategory {
+  MEN
+  WOMEN
+}
+
+enum FrmtLinkStatus {
+  PENDING // demande du joueur, en attente de l'admin
+  VERIFIED // valide par l'admin
+}
+
+// Une ligne du classement publie par la FRMT, importee periodiquement (chaque import
+// remplace toutes les lignes). La FRMT ne publie pas d'identifiant stable : un joueur
+// s'identifie par son nom (tel que publie) et son annee de naissance.
+model FrmtRankingEntry {
+  id          String       @id @default(cuid())
+  category    FrmtCategory
+  rank        Int
+  evolution   Int? // places gagnees (+) ou perdues (-) ; null si inchange
+  fullName    String // "NOM PRENOM"
+  birthYear   Int?
+  club        String? // code club FRMT, ex. "COC"
+  nationality String?
+  points      Float
+  importedAt  DateTime     @default(now())
+
+  @@index([category, rank])
+  @@index([fullName])
+}
+
+// Lien entre un joueur de l'app et sa ligne du classement FRMT, valide par l'admin.
+// Il porte l'identite FRMT (et non l'id d'une ligne) pour survivre aux imports.
+model FrmtLink {
+  id         String         @id @default(cuid())
+  userId     String         @unique
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category   FrmtCategory
+  fullName   String
+  birthYear  Int?
+  status     FrmtLinkStatus @default(PENDING)
+  reviewedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+// Historique des imports : dates, volumes, erreur eventuelle (page FRMT modifiee...).
+model FrmtImport {
+  id         String    @id @default(cuid())
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  menCount   Int       @default(0)
+  womenCount Int       @default(0)
+  error      String?
 }

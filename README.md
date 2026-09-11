@@ -65,13 +65,21 @@ Les schémas Zod (auth, clubs, matchs, scores, recherche de joueurs) vivent dans
 - **En dev, en test et au typecheck**, le package est résolu sur ses **sources TS** grâce à la condition d'export `@padelteammates/source` (tsx, Vitest, Metro via `apps/mobile/metro.config.js`, `customConditions` des tsconfig) : aucune étape de build.
 - **En production**, `npm run build` compile d'abord `shared` puis l'API (`apps/api/tsconfig.build.json`), et Node résout le package sur `packages/shared/dist`.
 
+## Classement national FRMT
+
+Le profil d'un joueur licencié peut afficher son **classement national padel de la FRMT** (rang, points, évolution).
+
+- **Import** : la FRMT publie ce classement sur une [page publique](https://info2.frmt.ma/FRMT_CLASSEMENT_WB27?Type=P), sans API. L'API rejoue les requêtes de cette page comme un navigateur (`apps/api/src/services/frmt.client.ts`) et importe Messieurs + Dames (≈ 1 500 joueurs, une vingtaine de secondes, requêtes espacées). L'import est **automatique une fois par 24 h** (`FRMT_IMPORT_ENABLED=false` pour le couper), **manuel** via `npm run frmt:import`, ou depuis l'écran d'administration de l'app. Chaque tentative est tracée (`FrmtImport`) ; si la page de la FRMT change, l'import échoue proprement et le classement en place est conservé.
+- **Lien avec le profil** : la FRMT ne publie ni numéro de licence ni identifiant stable. Le joueur se retrouve dans le classement importé (nom + année de naissance) et demande le lien ; **l'administrateur le valide** avant qu'il soit visible des autres joueurs.
+- Ces données appartiennent à la FRMT : prévenir la fédération (voire lui demander un export officiel) avant une mise en production.
+
 ## Tests
 
 Suite d'intégration **Vitest + Supertest** contre une vraie base Postgres/Redis (base `padel_teamates_test`, DB Redis 1) :
 
 ```bash
 docker compose up -d          # infra requise
-npm test                      # 50 tests: auth, profil, clubs, amis, matchs, demandes pour rejoindre, scores/validation/stats, creneaux
+npm test                      # 60 tests: auth, profil, clubs, amis, matchs, demandes pour rejoindre, scores/validation/stats, classement FRMT, creneaux
 ```
 
 Le `apps/api/test/global-setup.ts` synchronise le schéma (`prisma db push`) et chaque test repart d'une base vide. Un fichier **`apps/api/requests.http`** (REST Client) déroule le parcours complet à la main.
@@ -133,6 +141,12 @@ La CI (GitHub Actions) rejoue à chaque push : typecheck de tous les workspaces,
 | POST | `/api/friends/:userId` | Envoyer une demande d'ami |
 | POST | `/api/friends/:userId/accept` | Accepter une demande d'ami |
 | DELETE | `/api/friends/:userId` | Refuser, annuler une demande ou retirer un ami |
+| GET | `/api/frmt/status` | Dernier import du classement FRMT (date, volumes, erreur) |
+| GET | `/api/frmt/ranking?q=&category=` | Rechercher un joueur dans le classement FRMT importé |
+| PUT/DELETE | `/api/frmt/link` | Demander (ou retirer) le lien entre son profil et sa ligne du classement |
+| GET | `/api/frmt/links` | Demandes de lien à valider (**admin**) |
+| POST/DELETE | `/api/frmt/links/:id[/verify]` | Valider / refuser une demande de lien (**admin**) |
+| POST | `/api/frmt/import` | Importer le classement immédiatement (**admin**) |
 | GET | `/api/notifications` | Notifications in-app |
 
 Toutes les routes (hors `register`/`login`/`health`) exigent l'en-tête `Authorization: Bearer <token>`.

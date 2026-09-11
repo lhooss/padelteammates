@@ -1,6 +1,7 @@
 import { prisma } from '../config/prisma.js';
 import { ForbiddenError, NotFoundError } from '../utils/errors.js';
 import { findFriendship, friendshipState, friendshipsWith } from './friendship.service.js';
+import { frmtSummaryFor } from './frmt.service.js';
 
 function winRate(wins: number, losses: number): number {
   const total = wins + losses;
@@ -39,7 +40,7 @@ export async function getPublicStats(viewerId: string, userId: string) {
 }
 
 // Profil d'un joueur vu par `viewerId` : profil padel (visible de tous), relation d'amitie,
-// stats si elles sont visibles, telephone seulement pour ses amis.
+// stats si elles sont visibles, telephone seulement pour ses amis, classement FRMT valide.
 export async function getProfile(viewerId: string, userId: string) {
   const user = await prisma.user.findUnique({ where: { id: userId }, select: PROFILE_SELECT });
   if (!user) throw new NotFoundError('Joueur introuvable');
@@ -59,6 +60,8 @@ export async function getProfile(viewerId: string, userId: string) {
     dominantHand: user.dominantHand,
     homeClub: user.homeClub,
     phone: closeFriend ? user.phone : null,
+    // Les autres ne voient qu'un classement FRMT valide par l'admin.
+    frmt: await frmtSummaryFor(userId, { includePending: state === 'SELF' }),
     stats: statsVisible ? statsOf(user) : null,
   };
 }

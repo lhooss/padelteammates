@@ -18,7 +18,8 @@
     "prisma:migrate": "npm run prisma:migrate -w @padelteammates/api --",
     "prisma:deploy": "npm run prisma:deploy -w @padelteammates/api",
     "prisma:studio": "npm run prisma:studio -w @padelteammates/api",
-    "seed": "npm run seed -w @padelteammates/api"
+    "seed": "npm run seed -w @padelteammates/api",
+    "frmt:import": "npm run frmt:import -w @padelteammates/api"
   },
   "engines": {
     "node": ">=20"

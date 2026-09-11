@@ -1,5 +1,5 @@
 // Formes des reponses de l'API (apps/api). Les dates arrivent en chaines ISO.
-import type { CourtSide, Hand, PlayerLevel } from '@padelteammates/shared';
+import type { CourtSide, FrmtCategory, Hand, PlayerLevel } from '@padelteammates/shared';
 
 export type Team = 'A' | 'B';
 export type MatchStatus = 'PLANNED' | 'PENDING' | 'COMPLETED';
@@ -13,6 +13,19 @@ export interface PadelProfile {
   homeClub: { id: string; name: string } | null;
 }
 
+// Classement national FRMT relie au profil (valide par l'admin, ou en attente pour soi).
+export interface FrmtSummary {
+  status: 'PENDING' | 'VERIFIED';
+  category: FrmtCategory;
+  fullName: string;
+  birthYear: number | null;
+  rank: number | null; // null : absent du dernier classement importe
+  points: number | null;
+  evolution: number | null;
+  club: string | null;
+  importedAt: string | null;
+}
+
 export interface User extends PadelProfile {
   id: string;
   name: string;
@@ -22,6 +35,7 @@ export interface User extends PadelProfile {
   wins: number;
   losses: number;
   phone: string | null; // +212XXXXXXXXX
+  frmt?: FrmtSummary | null; // renvoye par GET /me
   createdAt: string;
 }
 
@@ -95,6 +109,7 @@ export interface PlayerProfile extends PlayerSummary, PadelProfile {
   profilePublic: boolean;
   friendship: FriendshipState;
   phone: string | null; // seulement pour ses amis
+  frmt: FrmtSummary | null; // seulement s'il est valide (sauf pour soi)
   stats: PlayerStats | null; // null : profil prive et pas ami
 }
 
@@ -133,4 +148,44 @@ export interface Match {
   participants: Participant[];
   score?: Score | null; // absent du calendrier
   joinRequests?: JoinRequest[]; // dans le calendrier : seulement la mienne
+}
+
+// --- Classement FRMT ---
+
+export interface FrmtRankingEntry {
+  id: string;
+  category: FrmtCategory;
+  rank: number;
+  evolution: number | null;
+  fullName: string;
+  birthYear: number | null;
+  club: string | null;
+  nationality: string | null;
+  points: number;
+  importedAt: string;
+}
+
+export interface FrmtImportRun {
+  id: string;
+  startedAt: string;
+  finishedAt: string | null;
+  menCount: number;
+  womenCount: number;
+  error: string | null;
+}
+
+export interface FrmtImportStatus {
+  lastAttempt: FrmtImportRun | null;
+  lastSuccess: FrmtImportRun | null;
+}
+
+// Demande de lien a valider (ecran admin).
+export interface FrmtPendingLink {
+  id: string;
+  category: FrmtCategory;
+  fullName: string;
+  birthYear: number | null;
+  createdAt: string;
+  user: { id: string; name: string; email: string };
+  entry: FrmtRankingEntry | null;
 }

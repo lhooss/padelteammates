@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
-import { ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Switch, View } from 'react-native';
 
 import { Button } from '@/components/button';
+import { FrmtCard } from '@/components/frmt-card';
 import { InfoRows } from '@/components/info-rows';
 import { QueryState } from '@/components/query-state';
 import { Screen } from '@/components/screen';
@@ -12,7 +13,7 @@ import { BottomTabInset, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { errorMessage } from '@/lib/api-error';
 import { formatPhone, padelProfileRows } from '@/lib/profile';
-import { useMeQuery, useUpdateMeMutation } from '@/store/api';
+import { useMeQuery, useUnlinkFrmtMutation, useUpdateMeMutation } from '@/store/api';
 import { signedOut } from '@/store/auth-slice';
 import { useAppDispatch } from '@/store/hooks';
 
@@ -21,6 +22,7 @@ export default function ProfileScreen() {
   const dispatch = useAppDispatch();
   const { data: me, isLoading, error, refetch } = useMeQuery();
   const [updateMe, { isLoading: saving }] = useUpdateMeMutation();
+  const [unlinkFrmt, { isLoading: unlinking }] = useUnlinkFrmtMutation();
 
   if (!me) {
     return (
@@ -28,6 +30,13 @@ export default function ProfileScreen() {
         <QueryState loading={isLoading} error={errorMessage(error)} onRetry={refetch} />
       </Screen>
     );
+  }
+
+  function confirmUnlink() {
+    Alert.alert('Retirer votre classement FRMT ?', 'Il ne sera plus affiché sur votre profil.', [
+      { text: 'Annuler', style: 'cancel' },
+      { text: 'Retirer', style: 'destructive', onPress: () => void unlinkFrmt() },
+    ]);
   }
 
   return (
@@ -39,6 +48,38 @@ export default function ProfileScreen() {
         </View>
 
         <StatTiles wins={me.wins} losses={me.losses} />
+
+        <View style={styles.section}>
+          <ThemedText type="smallBold">Classement national FRMT</ThemedText>
+          {me.frmt ? (
+            <>
+              <FrmtCard summary={me.frmt} />
+              <View style={styles.actions}>
+                <Button
+                  title="Changer"
+                  variant="secondary"
+                  style={styles.flex}
+                  onPress={() => router.push('/account/frmt')}
+                />
+                <Button
+                  title="Retirer"
+                  variant="danger"
+                  style={styles.flex}
+                  loading={unlinking}
+                  onPress={confirmUnlink}
+                />
+              </View>
+            </>
+          ) : (
+            <>
+              <ThemedText type="small" themeColor="textSecondary">
+                Licencié à la FRMT ? Retrouvez-vous dans le classement national padel pour l'afficher sur votre
+                profil.
+              </ThemedText>
+              <Button title="Relier mon classement FRMT" variant="secondary" onPress={() => router.push('/account/frmt')} />
+            </>
+          )}
+        </View>
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -79,6 +120,9 @@ export default function ProfileScreen() {
           />
         </ThemedView>
 
+        {me.role === 'ADMIN' ? (
+          <Button title="Administration FRMT" variant="secondary" onPress={() => router.push('/admin/frmt')} />
+        ) : null}
         <Button title="Email et mot de passe" variant="secondary" onPress={() => router.push('/account/security')} />
         <Button title="Se déconnecter" variant="danger" onPress={() => dispatch(signedOut())} />
       </ScrollView>
@@ -98,6 +142,10 @@ const styles = StyleSheet.create({
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: Spacing.two,
   },
   row: {
     flexDirection: 'row',

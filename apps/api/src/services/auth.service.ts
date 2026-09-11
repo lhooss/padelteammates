@@ -2,6 +2,7 @@ import { prisma } from '../config/prisma.js';
 import { hashPassword, verifyPassword } from '../utils/password.js';
 import { signToken } from '../utils/jwt.js';
 import { BadRequestError, ConflictError, NotFoundError, UnauthorizedError } from '../utils/errors.js';
+import { frmtSummaryFor } from './frmt.service.js';
 import type {
   ChangeEmailInput,
   ChangePasswordInput,
@@ -57,8 +58,13 @@ export async function login(input: LoginInput) {
   return { user, token };
 }
 
-export function getMe(userId: string) {
-  return prisma.user.findUniqueOrThrow({ where: { id: userId }, select: PUBLIC_USER_SELECT });
+export async function getMe(userId: string) {
+  const [user, frmt] = await Promise.all([
+    prisma.user.findUniqueOrThrow({ where: { id: userId }, select: PUBLIC_USER_SELECT }),
+    // Son propre classement FRMT, y compris une demande de lien en attente de l'admin.
+    frmtSummaryFor(userId, { includePending: true }),
+  ]);
+  return { ...user, frmt };
 }
 
 export async function updateProfile(userId: string, input: UpdateProfileInput) {

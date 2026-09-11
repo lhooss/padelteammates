@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import { authRouter } from './routes/auth.routes.js';
 import { clubRouter } from './routes/club.routes.js';
 import { friendRouter } from './routes/friend.routes.js';
+import { frmtRouter } from './routes/frmt.routes.js';
 import { matchRouter } from './routes/match.routes.js';
 import { userRouter } from './routes/user.routes.js';
 import { notificationRouter } from './routes/notification.routes.js';
@@ -25,6 +26,7 @@ export function createApp(): Express {
   app.use('/api/matches', matchRouter);
   app.use('/api/users', userRouter);
   app.use('/api/friends', friendRouter);
+  app.use('/api/frmt', frmtRouter);
   app.use('/api/notifications', notificationRouter);
 
   app.use(notFoundHandler);

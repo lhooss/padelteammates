@@ -10,7 +10,10 @@ type NotificationType =
   | 'FRIEND_ACCEPTED'
   | 'JOIN_REQUEST'
   | 'JOIN_ACCEPTED'
-  | 'JOIN_DECLINED';
+  | 'JOIN_DECLINED'
+  | 'FRMT_LINK_REQUEST'
+  | 'FRMT_LINK_VERIFIED'
+  | 'FRMT_LINK_REJECTED';
 
 interface CreateNotificationArgs {
   userId: string;

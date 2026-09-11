@@ -15,6 +15,7 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "seed": "tsx prisma/seed.ts",
+    "frmt:import": "tsx --conditions=@padelteammates/source scripts/frmt-import.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },

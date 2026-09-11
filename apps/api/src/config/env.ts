@@ -9,6 +9,11 @@ const envSchema = z.object({
   REDIS_URL: z.string().url().default('redis://localhost:6379'),
   JWT_SECRET: z.string().min(16, 'JWT_SECRET doit faire au moins 16 caracteres'),
   JWT_EXPIRES_IN: z.string().default('7d'),
+  // Import automatique du classement FRMT (au plus une fois par 24 h). "false" pour le couper.
+  FRMT_IMPORT_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
 });
 
 const parsed = envSchema.safeParse(process.env);

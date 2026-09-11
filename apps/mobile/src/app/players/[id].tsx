@@ -3,6 +3,7 @@ import { Linking, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { FriendAction } from '@/components/friend-action';
+import { FrmtCard } from '@/components/frmt-card';
 import { InfoRows } from '@/components/info-rows';
 import { QueryState } from '@/components/query-state';
 import { StatTiles } from '@/components/stat-tiles';
@@ -21,8 +22,8 @@ const RELATION_LABEL = {
   REQUEST_RECEIVED: "Vous a envoyé une demande d'ami",
 } as const;
 
-// Profil d'un autre joueur : profil padel, relation d'amitie, stats (si profil public ou ami)
-// et telephone / WhatsApp pour ses amis.
+// Profil d'un autre joueur : classement FRMT (s'il est valide), profil padel, relation d'amitie,
+// stats (si profil public ou ami) et telephone / WhatsApp pour ses amis.
 export default function PlayerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: player, isLoading, error, refetch } = usePlayerQuery(id);
@@ -44,6 +45,8 @@ export default function PlayerScreen() {
           </View>
 
           <FriendAction userId={player.id} name={player.name} state={player.friendship} />
+
+          {player.frmt ? <FrmtCard summary={player.frmt} /> : null}
 
           <InfoRows rows={padelProfileRows(player)} />
 
