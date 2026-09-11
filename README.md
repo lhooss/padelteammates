@@ -47,6 +47,7 @@ npm run mobile    # serveur Expo : scanner le QR code avec Expo Go (SDK 57)
 - Le téléphone et le PC doivent être sur le **même Wi-Fi**. L'app joint l'API automatiquement sur l'IP du PC qui lance Expo, port `3001` ; pour viser une autre API, définir `EXPO_PUBLIC_API_URL` dans `apps/mobile/.env` (voir `.env.example`).
 - Sous Windows, autoriser Node.js dans le pare-feu pour les ports d'Expo (`8081` par défaut, `--port` sinon) et `3001` (API).
 - Écrans :
+  - **Notifications** (cloche 🔔 avec le nombre de non-lues, en haut du calendrier, de mes matchs et des amis) : invitations, demandes d'ami, demandes pour rejoindre, scores à valider, classement FRMT ; toucher une notification la marque comme lue et ouvre l'écran concerné. Sans push pour l'instant : vérification chaque minute et au retour dans l'app.
   - **Calendrier** de la semaine de la communauté, filtrable par club ; mes matchs sont mis en avant ; « Rejoindre l'équipe A / B » sur les matchs qui ont des places libres.
   - **Mes matchs** : invitations à accepter ou refuser, scores à saisir ou valider et demandes pour rejoindre à traiter (badge sur l'onglet), mes demandes envoyées, à venir, terminés avec leur score.
   - **Score du match** (à l'issue du créneau) : composition finale 2 contre 2, sets de chaque partie, résultat calculé en direct (même calcul que l'API, `computeResult` de `packages/shared`) ; l'équipe adverse valide ou corrige.
@@ -79,7 +80,7 @@ Suite d'intégration **Vitest + Supertest** contre une vraie base Postgres/Redis
 
 ```bash
 docker compose up -d          # infra requise
-npm test                      # 60 tests: auth, profil, clubs, amis, matchs, demandes pour rejoindre, scores/validation/stats, classement FRMT, creneaux
+npm test                      # 61 tests: auth, profil, clubs, amis, matchs, demandes pour rejoindre, scores/validation/stats, classement FRMT, notifications, creneaux
 ```
 
 Le `apps/api/test/global-setup.ts` synchronise le schéma (`prisma db push`) et chaque test repart d'une base vide. Un fichier **`apps/api/requests.http`** (REST Client) déroule le parcours complet à la main.

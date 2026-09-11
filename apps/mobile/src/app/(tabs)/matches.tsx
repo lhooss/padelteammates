@@ -6,6 +6,7 @@ import { Button } from '@/components/button';
 import { JoinMatchActions } from '@/components/join-match-actions';
 import { JoinRequestsList } from '@/components/join-requests-list';
 import { MatchCard } from '@/components/match-card';
+import { NotificationBell } from '@/components/notification-bell';
 import { QueryState } from '@/components/query-state';
 import { ScoreActions } from '@/components/score-actions';
 import { Screen } from '@/components/screen';
@@ -36,6 +37,7 @@ export default function MyMatchesScreen() {
         Mes matchs
       </ThemedText>
       <Button title="Planifier" style={styles.planButton} onPress={() => router.push('/match/new')} />
+      <NotificationBell />
     </View>
   );
 

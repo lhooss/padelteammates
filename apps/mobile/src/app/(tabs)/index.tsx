@@ -7,6 +7,7 @@ import { Button } from '@/components/button';
 import { Chip } from '@/components/chip';
 import { JoinMatchActions } from '@/components/join-match-actions';
 import { MatchCard } from '@/components/match-card';
+import { NotificationBell } from '@/components/notification-bell';
 import { QueryState } from '@/components/query-state';
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
@@ -32,6 +33,7 @@ export default function CalendarScreen() {
           Calendrier
         </ThemedText>
         <Button title="Planifier" style={styles.planButton} onPress={() => router.push('/match/new')} />
+        <NotificationBell />
       </View>
       <View style={styles.weekSwitcher}>
         <Button

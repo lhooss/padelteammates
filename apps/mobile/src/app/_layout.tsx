@@ -1,10 +1,11 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { useColorScheme } from 'react-native';
+import { AppState, useColorScheme } from 'react-native';
 import { Provider } from 'react-redux';
 
 import { store } from '@/store';
+import { api } from '@/store/api';
 import { restoreSession } from '@/store/auth-slice';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 
@@ -33,11 +34,25 @@ function RootNavigator() {
     if (status !== 'restoring') void SplashScreen.hideAsync();
   }, [status]);
 
+  // Pas encore de notifications push : au retour dans l'app, on rafraichit ce qui a pu
+  // changer entre-temps (notifications, invitations et matchs, demandes d'ami).
+  useEffect(() => {
+    if (status !== 'signedIn') return;
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') dispatch(api.util.invalidateTags(['Notification', 'Match', 'Friend']));
+    });
+    return () => subscription.remove();
+  }, [dispatch, status]);
+
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Protected guard={status === 'signedIn'}>
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen
+            name="notifications"
+            options={{ headerShown: true, title: 'Notifications', headerBackTitle: 'Retour' }}
+          />
           <Stack.Screen
             name="players/[id]"
             options={{ headerShown: true, title: 'Joueur', headerBackTitle: 'Retour' }}

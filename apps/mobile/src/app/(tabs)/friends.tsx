@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ActivityIndicator, FlatList, SectionList, StyleSheet, View } from 'react-native';
 
 import type { FriendshipState, PlayerSummary } from '@/api/types';
+import { NotificationBell } from '@/components/notification-bell';
 import { PlayerRow } from '@/components/player-row';
 import { Screen } from '@/components/screen';
 import { TextField } from '@/components/text-field';
@@ -43,7 +44,12 @@ export default function FriendsScreen() {
     <Screen>
       {/* Hors de la liste : le champ garde le focus quand on passe a l'affichage des resultats. */}
       <View style={styles.header}>
-        <ThemedText type="subtitle">Amis</ThemedText>
+        <View style={styles.titleRow}>
+          <ThemedText type="subtitle" style={styles.title}>
+            Amis
+          </ThemedText>
+          <NotificationBell />
+        </View>
         <TextField
           label="Rechercher un joueur"
           placeholder="Nom (2 lettres minimum)"
@@ -114,6 +120,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingTop: Spacing.three,
     paddingBottom: Spacing.two,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  title: {
+    flex: 1,
   },
   list: {
     paddingHorizontal: Spacing.three,

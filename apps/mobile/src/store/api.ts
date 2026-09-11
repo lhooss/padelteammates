@@ -16,6 +16,7 @@ import type {
 } from '@padelteammates/shared';
 
 import type {
+  AppNotification,
   AuthResponse,
   Club,
   CreateMatchRequest,
@@ -69,7 +70,7 @@ const FRMT_LINK_TAGS = ['Me', 'Player', 'Frmt'] as const;
 export const api = createApi({
   reducerPath: 'api',
   baseQuery,
-  tagTypes: ['Me', 'Match', 'Club', 'Friend', 'Player', 'Frmt'],
+  tagTypes: ['Me', 'Match', 'Club', 'Friend', 'Player', 'Frmt', 'Notification'],
   endpoints: (build) => ({
     login: build.mutation<AuthResponse, LoginInput>({
       query: (body) => ({ url: '/auth/login', method: 'POST', body }),
@@ -186,6 +187,20 @@ export const api = createApi({
       invalidatesTags: [...FRIENDSHIP_TAGS],
     }),
 
+    // --- Notifications in-app ---
+    notifications: build.query<AppNotification[], void>({
+      query: () => '/notifications',
+      providesTags: ['Notification'],
+    }),
+    markNotificationRead: build.mutation<void, string>({
+      query: (id) => ({ url: `/notifications/${id}/read`, method: 'POST' }),
+      invalidatesTags: ['Notification'],
+    }),
+    markAllNotificationsRead: build.mutation<void, void>({
+      query: () => ({ url: '/notifications/read-all', method: 'POST' }),
+      invalidatesTags: ['Notification'],
+    }),
+
     // --- Classement FRMT ---
     frmtStatus: build.query<FrmtImportStatus, void>({
       query: () => '/frmt/status',
@@ -249,6 +264,9 @@ export const {
   useSendFriendRequestMutation,
   useAcceptFriendRequestMutation,
   useRemoveFriendMutation,
+  useNotificationsQuery,
+  useMarkNotificationReadMutation,
+  useMarkAllNotificationsReadMutation,
   useFrmtStatusQuery,
   useFrmtSearchQuery,
   useLinkFrmtMutation,

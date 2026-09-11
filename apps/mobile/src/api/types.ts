@@ -179,6 +179,31 @@ export interface FrmtImportStatus {
   lastSuccess: FrmtImportRun | null;
 }
 
+// --- Notifications in-app ---
+
+export type NotificationType =
+  | 'INVITE'
+  | 'SCORE_ENTERED'
+  | 'SCORE_VALIDATED'
+  | 'MATCH_COMPLETED'
+  | 'FRIEND_REQUEST'
+  | 'FRIEND_ACCEPTED'
+  | 'JOIN_REQUEST'
+  | 'JOIN_ACCEPTED'
+  | 'JOIN_DECLINED'
+  | 'FRMT_LINK_REQUEST'
+  | 'FRMT_LINK_VERIFIED'
+  | 'FRMT_LINK_REJECTED';
+
+export interface AppNotification {
+  id: string;
+  type: NotificationType;
+  message: string;
+  read: boolean;
+  matchId: string | null;
+  createdAt: string;
+}
+
 // Demande de lien a valider (ecran admin).
 export interface FrmtPendingLink {
   id: string;
