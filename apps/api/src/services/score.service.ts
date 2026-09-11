@@ -2,10 +2,10 @@ import type { Prisma, Team } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../utils/errors.js';
 import { slotEnd } from '../utils/slot.js';
-import { applyStats, computeResult } from './stats.service.js';
+import { applyStats } from './stats.service.js';
 import { notifyMany } from './notification.service.js';
 import { clearActive, markActive, withMatchLock } from './activeMatch.service.js';
-import type { SubmitScoreInput } from '@padelteammates/shared';
+import { computeResult, type SubmitScoreInput } from '@padelteammates/shared';
 
 type Roster = { A: string[]; B: string[] };
 

@@ -3,12 +3,12 @@ import { useColorScheme } from 'react-native';
 
 import { Colors } from '@/constants/theme';
 import { usePendingFriendRequests } from '@/hooks/use-pending-friend-requests';
-import { usePendingInvitations } from '@/hooks/use-pending-invitations';
+import { usePendingMatchActions } from '@/hooks/use-pending-match-actions';
 
 export default function AppTabs() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
-  const invitations = usePendingInvitations();
+  const matchActions = usePendingMatchActions();
   const friendRequests = usePendingFriendRequests();
 
   return (
@@ -24,7 +24,7 @@ export default function AppTabs() {
       <NativeTabs.Trigger name="matches">
         <NativeTabs.Trigger.Label>Mes matchs</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="sportscourt" md="sports_tennis" />
-        <NativeTabs.Trigger.Badge hidden={invitations === 0}>{String(invitations)}</NativeTabs.Trigger.Badge>
+        <NativeTabs.Trigger.Badge hidden={matchActions === 0}>{String(matchActions)}</NativeTabs.Trigger.Badge>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="friends">

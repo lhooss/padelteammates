@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { ScoreSummary } from './score-summary';
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
 
@@ -9,6 +10,7 @@ import type { Match, MatchStatus, Participant } from '@/api/types';
 import { Spacing, type ThemeColor } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { formatDay } from '@/lib/dates';
+import { teamInScore } from '@/lib/matches';
 
 const STATUS: Record<MatchStatus, { label: string; color: ThemeColor }> = {
   PLANNED: { label: 'Planifié', color: 'primary' },
@@ -62,6 +64,10 @@ export function MatchCard({
           alignEnd
         />
       </View>
+
+      {match.score ? (
+        <ScoreSummary score={match.score} myTeam={meId ? teamInScore(match.score, meId) : undefined} />
+      ) : null}
 
       {children}
     </ThemedView>

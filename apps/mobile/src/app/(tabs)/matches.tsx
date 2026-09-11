@@ -5,14 +5,15 @@ import type { Match } from '@/api/types';
 import { Button } from '@/components/button';
 import { MatchCard } from '@/components/match-card';
 import { QueryState } from '@/components/query-state';
+import { ScoreActions } from '@/components/score-actions';
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { BottomTabInset, Spacing } from '@/constants/theme';
 import { errorMessage } from '@/lib/api-error';
-import { canInvitePlayers, isPendingInvitation } from '@/lib/matches';
+import { canInvitePlayers, hasSlotEnded, isPendingInvitation, scoreAction } from '@/lib/matches';
 import { useMeQuery, useMyMatchesQuery, useRespondInviteMutation } from '@/store/api';
 
-// Mes matchs : invitations a traiter, matchs a venir, matchs termines.
+// Mes matchs : invitations et scores a traiter, matchs a venir, matchs termines.
 export default function MyMatchesScreen() {
   const { data: me } = useMeQuery();
   const { data, isLoading, isFetching, error, refetch } = useMyMatchesQuery();
@@ -45,9 +46,17 @@ export default function MyMatchesScreen() {
   }
 
   const isInvited = (m: Match) => isPendingInvitation(m, me.id);
+  const needsScore = (m: Match) => {
+    const action = scoreAction(m, me.id);
+    return action === 'enter' || action === 'validate';
+  };
   const sections = [
     { title: 'Invitations', data: data.filter(isInvited) },
-    { title: 'À venir', data: data.filter((m) => m.status !== 'COMPLETED' && !isInvited(m)) },
+    { title: 'Scores à saisir ou valider', data: data.filter(needsScore) },
+    {
+      title: 'À venir',
+      data: data.filter((m) => m.status !== 'COMPLETED' && !isInvited(m) && !needsScore(m)),
+    },
     { title: 'Terminés', data: data.filter((m) => m.status === 'COMPLETED') },
   ].filter((s) => s.data.length > 0);
 
@@ -81,7 +90,8 @@ export default function MyMatchesScreen() {
                 />
               </View>
             ) : null}
-            {canInvitePlayers(item, me.id) ? (
+            <ScoreActions match={item} meId={me.id} />
+            {canInvitePlayers(item, me.id) && !hasSlotEnded(item) ? (
               <Button
                 title="Inviter des joueurs"
                 variant="secondary"

@@ -6,12 +6,12 @@ import { ThemedView } from './themed-view';
 
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { usePendingFriendRequests } from '@/hooks/use-pending-friend-requests';
-import { usePendingInvitations } from '@/hooks/use-pending-invitations';
+import { usePendingMatchActions } from '@/hooks/use-pending-match-actions';
 
 const withCount = (label: string, count: number) => (count > 0 ? `${label} (${count})` : label);
 
 export default function AppTabs() {
-  const invitations = usePendingInvitations();
+  const matchActions = usePendingMatchActions();
   const friendRequests = usePendingFriendRequests();
 
   return (
@@ -23,7 +23,7 @@ export default function AppTabs() {
             <TabButton>Calendrier</TabButton>
           </TabTrigger>
           <TabTrigger name="matches" href="/matches" asChild>
-            <TabButton>{withCount('Mes matchs', invitations)}</TabButton>
+            <TabButton>{withCount('Mes matchs', matchActions)}</TabButton>
           </TabTrigger>
           <TabTrigger name="friends" href="/friends" asChild>
             <TabButton>{withCount('Amis', friendRequests)}</TabButton>

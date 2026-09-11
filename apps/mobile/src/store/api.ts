@@ -17,8 +17,11 @@ import type {
   PlayerProfile,
   PlayerSearchResult,
   PlayerSummary,
+  Score,
+  ScoreDetail,
   Team,
   User,
+  ValidateScoreResponse,
 } from '@/api/types';
 import { API_URL } from '@/config/api-url';
 
@@ -104,6 +107,17 @@ export const api = createApi({
       invalidatesTags: ['Match'],
     }),
 
+    // Saisie (ou correction) du score : compte comme la validation de son equipe.
+    submitScore: build.mutation<Score, { matchId: string; body: ScoreDetail }>({
+      query: ({ matchId, body }) => ({ url: `/matches/${matchId}/score`, method: 'POST', body }),
+      invalidatesTags: ['Match'],
+    }),
+    // Validation : peut verrouiller le match et mettre a jour les stats (profil, joueurs).
+    validateScore: build.mutation<ValidateScoreResponse, string>({
+      query: (matchId) => ({ url: `/matches/${matchId}/score/validate`, method: 'POST' }),
+      invalidatesTags: ['Match', 'Me', 'Player'],
+    }),
+
     searchPlayers: build.query<PlayerSearchResult[], string>({
       query: (q) => ({ url: '/users/search', params: { q } }),
       providesTags: ['Player'],
@@ -147,6 +161,8 @@ export const {
   useCreateMatchMutation,
   useInvitePlayersMutation,
   useRespondInviteMutation,
+  useSubmitScoreMutation,
+  useValidateScoreMutation,
   useSearchPlayersQuery,
   usePlayerQuery,
   useFriendsQuery,

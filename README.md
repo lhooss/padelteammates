@@ -48,7 +48,8 @@ npm run mobile    # serveur Expo : scanner le QR code avec Expo Go (SDK 57)
 - Sous Windows, autoriser Node.js dans le pare-feu pour les ports d'Expo (`8081` par défaut, `--port` sinon) et `3001` (API).
 - Écrans :
   - **Calendrier** de la semaine de la communauté, filtrable par club ; mes matchs sont mis en avant.
-  - **Mes matchs** : invitations à accepter ou refuser (badge sur l'onglet), à venir, terminés.
+  - **Mes matchs** : invitations à accepter ou refuser, scores à saisir ou valider (badge sur l'onglet), à venir, terminés avec leur score.
+  - **Score du match** (à l'issue du créneau) : composition finale 2 contre 2, sets de chaque partie, résultat calculé en direct (même calcul que l'API, `computeResult` de `packages/shared`) ; l'équipe adverse valide ou corrige.
   - **Amis** : recherche de joueurs par nom, demandes reçues / envoyées (badge), liste d'amis.
   - **Profil d'un joueur** (en touchant son nom) : relation d'amitié, stats si visibles.
   - **Planifier un match** : club, jour, créneau d'1h30, invitation d'amis (1 partenaire, 2 adversaires).

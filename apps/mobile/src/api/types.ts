@@ -35,13 +35,31 @@ export interface Participant {
   user: { id: string; name: string };
 }
 
+export interface SetScore {
+  a: number; // jeux de l'equipe A
+  b: number; // jeux de l'equipe B
+}
+
+// Composition finale + detail des parties (meme forme que submitScoreSchema).
+export interface ScoreDetail {
+  teams: Record<Team, string[]>;
+  games: { sets: SetScore[] }[];
+}
+
 export interface Score {
   id: string;
   matchId: string;
   gamesPlayed: number;
-  winningTeam: Team | null;
+  winningTeam: Team | null; // null : egalite
   validators: string[];
   enteredById: string;
+  setsDetail: ScoreDetail;
+}
+
+export interface ValidateScoreResponse {
+  score: Score;
+  status: 'PENDING' | 'COMPLETED';
+  awaitingTeams?: Team[];
 }
 
 // Relation de l'utilisateur connecte avec un autre joueur.
