@@ -65,3 +65,8 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # Verifie que Metro resout tout le code de l'app (dont @padelteammates/shared).
+      - name: Bundle mobile (Android)
+        working-directory: apps/mobile
+        run: npx expo export --platform android --output-dir ${{ runner.temp }}/expo-export

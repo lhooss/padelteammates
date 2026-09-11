@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "dev": "npm run dev -w @padelteammates/api",
+    "mobile": "npm run start -w @padelteammates/mobile",
     "build": "npm run build -w @padelteammates/shared && npm run build -w @padelteammates/api",
     "start": "npm run start -w @padelteammates/api",
     "typecheck": "npm run typecheck --workspaces --if-present",
