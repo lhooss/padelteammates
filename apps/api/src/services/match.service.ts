@@ -1,8 +1,9 @@
 import { prisma } from '../config/prisma.js';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../utils/errors.js';
+import { slotEnd } from '../utils/slot.js';
 import { friendIds } from './friendship.service.js';
 import { notify, notifyMany } from './notification.service.js';
-import type { CreateMatchInput } from '@padelteammates/shared';
+import type { AddInvitesInput, CreateMatchInput } from '@padelteammates/shared';
 
 const MATCH_INCLUDE = {
   club: true,
@@ -30,6 +31,39 @@ function weekBounds(ref: Date): { start: Date; end: Date } {
   return { start, end };
 }
 
+function inviteMessage(day: Date, slot: string, clubName: string): string {
+  return `Vous etes invite a un match le ${day.toISOString().slice(0, 10)} (${slot}) au club ${clubName}.`;
+}
+
+// Les invites doivent etre des joueurs inscrits et des amis de l'organisateur.
+async function assertCanInvite(organizerId: string, inviteeIds: string[]): Promise<void> {
+  if (inviteeIds.length === 0) return;
+  const found = await prisma.user.count({ where: { id: { in: inviteeIds } } });
+  if (found !== inviteeIds.length) {
+    throw new BadRequestError('Un ou plusieurs joueurs invites sont introuvables');
+  }
+  // On n'invite que ses amis (demande d'ami acceptee).
+  const friends = await friendIds(organizerId);
+  if (inviteeIds.some((id) => !friends.has(id))) {
+    throw new ForbiddenError('Vous ne pouvez inviter que vos amis');
+  }
+}
+
+// Conflit de creneau cote joueurs : aucun ne doit deja jouer ce jour + creneau
+// dans un autre match non termine.
+async function assertNoSlotClash(userIds: string[], day: Date, slot: string): Promise<void> {
+  const clash = await prisma.participant.findFirst({
+    where: {
+      userId: { in: userIds },
+      match: { date: day, slot, status: { not: 'COMPLETED' } },
+    },
+    select: { userId: true },
+  });
+  if (clash) {
+    throw new ConflictError('Un joueur a deja un match sur ce creneau');
+  }
+}
+
 export async function createMatch(creatorId: string, input: CreateMatchInput) {
   const day = toDayUTC(input.date);
   const inviteeIds = input.invites.map((i) => i.userId);
@@ -42,33 +76,8 @@ export async function createMatch(creatorId: string, input: CreateMatchInput) {
   const club = await prisma.club.findUnique({ where: { id: input.clubId } });
   if (!club) throw new NotFoundError('Club introuvable');
 
-  // Tous les invites doivent etre des joueurs inscrits.
-  if (inviteeIds.length > 0) {
-    const found = await prisma.user.count({ where: { id: { in: inviteeIds } } });
-    if (found !== inviteeIds.length) {
-      throw new BadRequestError('Un ou plusieurs joueurs invites sont introuvables');
-    }
-
-    // On n'invite que ses amis (demande d'ami acceptee).
-    const friends = await friendIds(creatorId);
-    if (inviteeIds.some((id) => !friends.has(id))) {
-      throw new ForbiddenError('Vous ne pouvez inviter que vos amis');
-    }
-  }
-
-  // Conflit de creneau cote joueurs: aucun participant (createur + invites)
-  // ne doit deja jouer ce jour + creneau dans un autre match non termine.
-  const everyoneIds = [creatorId, ...inviteeIds];
-  const clash = await prisma.participant.findFirst({
-    where: {
-      userId: { in: everyoneIds },
-      match: { date: day, slot: input.slot, status: { not: 'COMPLETED' } },
-    },
-    select: { userId: true },
-  });
-  if (clash) {
-    throw new ConflictError('Un joueur a deja un match sur ce creneau');
-  }
+  await assertCanInvite(creatorId, inviteeIds);
+  await assertNoSlotClash([creatorId, ...inviteeIds], day, input.slot);
 
   try {
     const match = await prisma.$transaction(async (tx) => {
@@ -94,11 +103,7 @@ export async function createMatch(creatorId: string, input: CreateMatchInput) {
 
       await notifyMany(
         inviteeIds,
-        {
-          type: 'INVITE',
-          message: `Vous etes invite a un match le ${day.toISOString().slice(0, 10)} (${input.slot}) au club ${club.name}.`,
-          matchId: created.id,
-        },
+        { type: 'INVITE', message: inviteMessage(day, input.slot, club.name), matchId: created.id },
         tx,
       );
 
@@ -113,6 +118,55 @@ export async function createMatch(creatorId: string, input: CreateMatchInput) {
     }
     throw err;
   }
+}
+
+// Ajoute des amis a un match deja cree, dans les places libres. Reserve a l'organisateur,
+// tant que le match est planifie et que son creneau n'est pas passe.
+export async function invitePlayers(userId: string, matchId: string, input: AddInvitesInput) {
+  const match = await prisma.match.findUnique({
+    where: { id: matchId },
+    include: { participants: true, club: true },
+  });
+  if (!match) throw new NotFoundError('Match introuvable');
+  if (match.createdById !== userId) {
+    throw new ForbiddenError('Seul l\'organisateur peut inviter des joueurs');
+  }
+  if (match.status !== 'PLANNED' || Date.now() >= slotEnd(match.date, match.slot).getTime()) {
+    throw new BadRequestError('Ce match n\'accepte plus de nouveaux joueurs');
+  }
+
+  const inviteeIds = input.invites.map((i) => i.userId);
+  if (match.participants.some((p) => inviteeIds.includes(p.userId))) {
+    throw new ConflictError('Ce joueur participe deja au match');
+  }
+  // 2 joueurs max par equipe, en comptant ceux deja presents (invites compris).
+  for (const team of ['A', 'B'] as const) {
+    const total =
+      match.participants.filter((p) => p.team === team).length +
+      input.invites.filter((i) => i.team === team).length;
+    if (total > 2) throw new BadRequestError(`Plus assez de place dans l'equipe ${team}`);
+  }
+
+  await assertCanInvite(userId, inviteeIds);
+  await assertNoSlotClash(inviteeIds, match.date, match.slot);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.participant.createMany({
+      data: input.invites.map((i) => ({
+        matchId,
+        userId: i.userId,
+        team: i.team,
+        presenceStatus: 'INVITED' as const,
+      })),
+    });
+    await notifyMany(
+      inviteeIds,
+      { type: 'INVITE', message: inviteMessage(match.date, match.slot, match.club.name), matchId },
+      tx,
+    );
+  });
+
+  return getMatch(matchId);
 }
 
 export async function respondToInvite(userId: string, matchId: string, accept: boolean) {

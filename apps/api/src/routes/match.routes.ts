@@ -3,6 +3,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { getValidated, validate } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/auth.js';
 import {
+  addInvitesSchema,
   createMatchSchema,
   respondInviteSchema,
   submitScoreSchema,
@@ -58,6 +59,15 @@ matchRouter.post(
   asyncHandler(async (req, res) => {
     const match = await matchService.respondToInvite(req.auth!.userId, req.params.id!, req.body.accept);
     res.json(match);
+  }),
+);
+
+// Inviter des amis a un match deja cree (organisateur, places libres).
+matchRouter.post(
+  '/:id/invites',
+  validate(addInvitesSchema),
+  asyncHandler(async (req, res) => {
+    res.json(await matchService.invitePlayers(req.auth!.userId, req.params.id!, req.body));
   }),
 );
 

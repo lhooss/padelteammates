@@ -17,6 +17,7 @@ import type {
   PlayerProfile,
   PlayerSearchResult,
   PlayerSummary,
+  Team,
   User,
 } from '@/api/types';
 import { API_URL } from '@/config/api-url';
@@ -82,8 +83,16 @@ export const api = createApi({
       query: () => '/matches/mine',
       providesTags: ['Match'],
     }),
+    match: build.query<Match, string>({
+      query: (id) => `/matches/${id}`,
+      providesTags: ['Match'],
+    }),
     createMatch: build.mutation<Match, CreateMatchRequest>({
       query: (body) => ({ url: '/matches', method: 'POST', body }),
+      invalidatesTags: ['Match'],
+    }),
+    invitePlayers: build.mutation<Match, { matchId: string; invites: { userId: string; team: Team }[] }>({
+      query: ({ matchId, invites }) => ({ url: `/matches/${matchId}/invites`, method: 'POST', body: { invites } }),
       invalidatesTags: ['Match'],
     }),
     respondInvite: build.mutation<Match, { matchId: string; accept: boolean }>({
@@ -134,7 +143,9 @@ export const {
   useClubsQuery,
   useWeeklyCalendarQuery,
   useMyMatchesQuery,
+  useMatchQuery,
   useCreateMatchMutation,
+  useInvitePlayersMutation,
   useRespondInviteMutation,
   useSearchPlayersQuery,
   usePlayerQuery,

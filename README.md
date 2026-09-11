@@ -69,7 +69,7 @@ Suite d'intégration **Vitest + Supertest** contre une vraie base Postgres/Redis
 
 ```bash
 docker compose up -d          # infra requise
-npm test                      # 36 tests: auth, clubs, amis, matchs, scores/validation/stats, creneaux
+npm test                      # 40 tests: auth, clubs, amis, matchs, scores/validation/stats, creneaux
 ```
 
 Le `apps/api/test/global-setup.ts` synchronise le schéma (`prisma db push`) et chaque test repart d'une base vide. Un fichier **`apps/api/requests.http`** (REST Client) déroule le parcours complet à la main.
@@ -92,7 +92,7 @@ La CI (GitHub Actions) rejoue à chaque push : typecheck de tous les workspaces,
 
 - **Admin uniquement** pour créer/modifier les clubs (`requireAdmin`).
 - **Amis** : une demande d'ami est acceptée ou refusée par le destinataire ; deux demandes croisées valent acceptation. On peut annuler sa demande ou retirer un ami.
-- **Planification** : un joueur crée un match (club + créneau) et **n'invite que ses amis** ; les invités confirment ou déclinent.
+- **Planification** : un joueur crée un match (club + créneau) et **n'invite que ses amis** ; les invités confirment ou déclinent. L'organisateur peut ensuite **compléter les places libres** (2 joueurs max par équipe) tant que le match est planifié et que son créneau n'est pas passé.
 - **Anti-conflit de créneau** : contrainte `@@unique([clubId, date, slot])` + vérification qu'aucun joueur n'est déjà pris sur ce créneau.
 - **Calendrier hebdomadaire** global (lundi→dimanche) consultable par tous, filtrable par club.
 - **Saisie du résultat** par n'importe quel participant **confirmé**, uniquement **à l'issue du créneau** (heure de Kénitra, `Africa/Casablanca`). Composition finale **2 contre 2** reprenant les 4 joueurs confirmés, games et sets — validée par Zod.
@@ -111,6 +111,7 @@ La CI (GitHub Actions) rejoue à chaque push : typecheck de tous les workspaces,
 | POST/PATCH/DELETE | `/api/clubs...` | Gestion des clubs (**admin**) |
 | POST | `/api/matches` | Créer un match + inviter des amis |
 | POST | `/api/matches/:id/respond` | Accepter/décliner une invitation |
+| POST | `/api/matches/:id/invites` | Inviter des amis dans les places libres (organisateur) |
 | GET | `/api/matches/calendar/weekly` | Calendrier hebdomadaire (`?from=&clubId=`) |
 | GET | `/api/matches/mine` | Mes matchs |
 | POST | `/api/matches/:id/score` | Saisir le résultat (= validation de son équipe) |

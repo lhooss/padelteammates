@@ -5,6 +5,7 @@ import {
   auth,
   dayFromToday,
   makeFriends,
+  moveMatchToPast,
   registerAdmin,
   registerUser,
   resetDb,
@@ -176,5 +177,59 @@ describe('Matchs — planification & invitations', () => {
       .set('Authorization', auth(p[0].token))
       .expect(200);
     expect(empty.body).toHaveLength(0);
+  });
+});
+
+describe('Matchs — inviter des joueurs apres la creation', () => {
+  // Match de p1 avec son partenaire p2 : l'equipe B est libre.
+  async function matchWithFreeSpots(): Promise<{ p: TestUser[]; matchId: string }> {
+    const clubId = await seedClub();
+    const p = await fourPlayers();
+    const res = await request(app)
+      .post('/api/matches')
+      .set('Authorization', auth(p[0].token))
+      .send({ clubId, date: MATCH_DAY, slot: '18:00-19:30', creatorTeam: 'A', invites: [{ userId: p[1].id, team: 'A' }] })
+      .expect(201);
+    return { p, matchId: res.body.id as string };
+  }
+
+  function invite(user: TestUser, matchId: string, invites: { userId: string; team: 'A' | 'B' }[]) {
+    return request(app)
+      .post(`/api/matches/${matchId}/invites`)
+      .set('Authorization', auth(user.token))
+      .send({ invites });
+  }
+
+  it('l\'organisateur complete son match avec des amis, qui sont notifies', async () => {
+    const { p, matchId } = await matchWithFreeSpots();
+
+    const res = await invite(p[0]!, matchId, [
+      { userId: p[2]!.id, team: 'B' },
+      { userId: p[3]!.id, team: 'B' },
+    ]).expect(200);
+    expect(res.body.participants).toHaveLength(4);
+
+    const notifs = await request(app).get('/api/notifications').set('Authorization', auth(p[2]!.token)).expect(200);
+    expect(notifs.body.filter((n: { type: string }) => n.type === 'INVITE')).toHaveLength(1);
+  });
+
+  it('refuse une equipe deja complete (400) ou un joueur deja present (409)', async () => {
+    const { p, matchId } = await matchWithFreeSpots();
+    await invite(p[0]!, matchId, [{ userId: p[2]!.id, team: 'A' }]).expect(400);
+    await invite(p[0]!, matchId, [{ userId: p[1]!.id, team: 'B' }]).expect(409);
+  });
+
+  it('seul l\'organisateur invite, et seulement ses amis (403)', async () => {
+    const { p, matchId } = await matchWithFreeSpots();
+    await invite(p[1]!, matchId, [{ userId: p[2]!.id, team: 'B' }]).expect(403);
+
+    const stranger = await registerUser(app, { email: 'stranger@example.com' });
+    await invite(p[0]!, matchId, [{ userId: stranger.id, team: 'B' }]).expect(403);
+  });
+
+  it('refuse d\'inviter a un match deja passe (400)', async () => {
+    const { p, matchId } = await matchWithFreeSpots();
+    await moveMatchToPast(matchId);
+    await invite(p[0]!, matchId, [{ userId: p[2]!.id, team: 'B' }]).expect(400);
   });
 });

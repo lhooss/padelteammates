@@ -46,6 +46,10 @@ function RootNavigator() {
             name="match/new"
             options={{ headerShown: true, title: 'Planifier un match', presentation: 'modal' }}
           />
+          <Stack.Screen
+            name="match/[id]/invite"
+            options={{ headerShown: true, title: 'Inviter des joueurs', presentation: 'modal' }}
+          />
         </Stack.Protected>
         <Stack.Protected guard={status !== 'signedIn'}>
           <Stack.Screen name="(auth)" />

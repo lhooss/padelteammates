@@ -58,6 +58,17 @@ export const respondInviteSchema = z.object({
   accept: z.boolean(),
 });
 
+// Ajout de joueurs a un match deja cree (places libres). La place restante
+// dans chaque equipe est verifiee par l'API, qui connait les participants.
+export const addInvitesSchema = z
+  .object({
+    invites: z.array(inviteSchema).min(1, 'Choisissez au moins un joueur').max(3),
+  })
+  .refine(
+    (data) => new Set(data.invites.map((i) => i.userId)).size === data.invites.length,
+    'Invitations en double detectees',
+  );
+
 // Filtre du calendrier hebdomadaire: date de reference (defaut = semaine courante).
 export const weeklyCalendarSchema = z.object({
   from: z.coerce.date().optional(),
@@ -66,4 +77,5 @@ export const weeklyCalendarSchema = z.object({
 
 export type CreateMatchInput = z.infer<typeof createMatchSchema>;
 export type RespondInviteInput = z.infer<typeof respondInviteSchema>;
+export type AddInvitesInput = z.infer<typeof addInvitesSchema>;
 export type WeeklyCalendarInput = z.infer<typeof weeklyCalendarSchema>;

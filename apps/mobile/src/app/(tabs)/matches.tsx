@@ -9,7 +9,7 @@ import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { BottomTabInset, Spacing } from '@/constants/theme';
 import { errorMessage } from '@/lib/api-error';
-import { isPendingInvitation } from '@/lib/matches';
+import { canInvitePlayers, isPendingInvitation } from '@/lib/matches';
 import { useMeQuery, useMyMatchesQuery, useRespondInviteMutation } from '@/store/api';
 
 // Mes matchs : invitations a traiter, matchs a venir, matchs termines.
@@ -80,6 +80,13 @@ export default function MyMatchesScreen() {
                   onPress={() => answer(item.id, true)}
                 />
               </View>
+            ) : null}
+            {canInvitePlayers(item, me.id) ? (
+              <Button
+                title="Inviter des joueurs"
+                variant="secondary"
+                onPress={() => router.push({ pathname: '/match/[id]/invite', params: { id: item.id } })}
+              />
             ) : null}
           </MatchCard>
         )}
