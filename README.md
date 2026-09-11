@@ -53,7 +53,8 @@ npm run mobile    # serveur Expo : scanner le QR code avec Expo Go (SDK 57)
   - **Amis** : recherche de joueurs par nom, demandes reçues / envoyées (badge), liste d'amis.
   - **Profil d'un joueur** (en touchant son nom) : relation d'amitié, stats si visibles.
   - **Planifier un match** : club, jour, créneau d'1h30, invitation d'amis (1 partenaire, 2 adversaires).
-  - **Profil** : mes stats, profil public, déconnexion. Connexion / inscription.
+  - **Profil** : mes stats, profil padel (niveau, côté, main, club habituel, téléphone visible par mes amis), profil public ; **Modifier le profil** et **Email et mot de passe** (mot de passe actuel requis) ; déconnexion. Connexion / inscription.
+  - Le **profil d'un joueur** affiche son profil padel, et pour ses amis son téléphone avec un bouton WhatsApp.
 - Navigation `expo-router` (`src/app/`), état Redux Toolkit + RTK Query (`src/store/`), jeton JWT dans le trousseau du téléphone (`expo-secure-store`).
 - Documentation Expo de la version utilisée : https://docs.expo.dev/versions/v57.0.0/
 
@@ -70,7 +71,7 @@ Suite d'intégration **Vitest + Supertest** contre une vraie base Postgres/Redis
 
 ```bash
 docker compose up -d          # infra requise
-npm test                      # 45 tests: auth, clubs, amis, matchs, demandes pour rejoindre, scores/validation/stats, creneaux
+npm test                      # 50 tests: auth, profil, clubs, amis, matchs, demandes pour rejoindre, scores/validation/stats, creneaux
 ```
 
 Le `apps/api/test/global-setup.ts` synchronise le schéma (`prisma db push`) et chaque test repart d'une base vide. Un fichier **`apps/api/requests.http`** (REST Client) déroule le parcours complet à la main.
@@ -108,7 +109,9 @@ La CI (GitHub Actions) rejoue à chaque push : typecheck de tous les workspaces,
 |--------|-------|-------------|
 | POST | `/api/auth/register` | Inscription (retourne un JWT) |
 | POST | `/api/auth/login` | Connexion |
-| GET/PATCH | `/api/auth/me` | Profil courant (dont `profilePublic`) |
+| GET/PATCH | `/api/auth/me` | Profil courant ; modification : nom, `profilePublic`, profil padel (côté, niveau, main), club habituel, téléphone |
+| PATCH | `/api/auth/me/email` | Changer d'email (mot de passe actuel requis) |
+| PATCH | `/api/auth/me/password` | Changer de mot de passe (mot de passe actuel requis) |
 | GET | `/api/clubs` | Liste des clubs |
 | POST/PATCH/DELETE | `/api/clubs...` | Gestion des clubs (**admin**) |
 | POST | `/api/matches` | Créer un match + inviter des amis |

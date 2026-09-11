@@ -1,8 +1,14 @@
 import { prisma } from '../config/prisma.js';
 import { hashPassword, verifyPassword } from '../utils/password.js';
 import { signToken } from '../utils/jwt.js';
-import { ConflictError, UnauthorizedError } from '../utils/errors.js';
-import type { LoginInput, RegisterInput, UpdateProfileInput } from '@padelteammates/shared';
+import { BadRequestError, ConflictError, NotFoundError, UnauthorizedError } from '../utils/errors.js';
+import type {
+  ChangeEmailInput,
+  ChangePasswordInput,
+  LoginInput,
+  RegisterInput,
+  UpdateProfileInput,
+} from '@padelteammates/shared';
 
 const PUBLIC_USER_SELECT = {
   id: true,
@@ -12,6 +18,11 @@ const PUBLIC_USER_SELECT = {
   profilePublic: true,
   wins: true,
   losses: true,
+  preferredSide: true,
+  level: true,
+  dominantHand: true,
+  phone: true,
+  homeClub: { select: { id: true, name: true } },
   createdAt: true,
 } as const;
 
@@ -35,25 +46,58 @@ export async function register(input: RegisterInput) {
 }
 
 export async function login(input: LoginInput) {
-  const user = await prisma.user.findUnique({ where: { email: input.email } });
-  if (!user) throw new UnauthorizedError('Identifiants invalides');
+  const found = await prisma.user.findUnique({ where: { email: input.email } });
+  if (!found) throw new UnauthorizedError('Identifiants invalides');
 
-  const ok = await verifyPassword(input.password, user.passwordHash);
+  const ok = await verifyPassword(input.password, found.passwordHash);
   if (!ok) throw new UnauthorizedError('Identifiants invalides');
 
-  const token = signToken({ sub: user.id, role: user.role });
-  const { passwordHash: _omit, ...safe } = user;
-  return { user: safe, token };
+  const token = signToken({ sub: found.id, role: found.role });
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: found.id }, select: PUBLIC_USER_SELECT });
+  return { user, token };
 }
 
 export function getMe(userId: string) {
   return prisma.user.findUniqueOrThrow({ where: { id: userId }, select: PUBLIC_USER_SELECT });
 }
 
-export function updateProfile(userId: string, input: UpdateProfileInput) {
+export async function updateProfile(userId: string, input: UpdateProfileInput) {
+  if (input.homeClubId) {
+    const club = await prisma.club.findUnique({ where: { id: input.homeClubId }, select: { id: true } });
+    if (!club) throw new NotFoundError('Club introuvable');
+  }
   return prisma.user.update({
     where: { id: userId },
     data: input,
     select: PUBLIC_USER_SELECT,
+  });
+}
+
+// Confirme l'identite avant un changement sensible. 400 et non 401 : pour l'app,
+// un 401 signifie « session expiree » et declenche une deconnexion.
+async function assertCurrentPassword(userId: string, password: string): Promise<void> {
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { passwordHash: true } });
+  if (!(await verifyPassword(password, user.passwordHash))) {
+    throw new BadRequestError('Mot de passe actuel incorrect');
+  }
+}
+
+export async function changeEmail(userId: string, input: ChangeEmailInput) {
+  await assertCurrentPassword(userId, input.currentPassword);
+  const taken = await prisma.user.findUnique({ where: { email: input.email }, select: { id: true } });
+  if (taken && taken.id !== userId) throw new ConflictError('Email deja utilise');
+
+  return prisma.user.update({
+    where: { id: userId },
+    data: { email: input.email },
+    select: PUBLIC_USER_SELECT,
+  });
+}
+
+export async function changePassword(userId: string, input: ChangePasswordInput): Promise<void> {
+  await assertCurrentPassword(userId, input.currentPassword);
+  await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash: await hashPassword(input.newPassword) },
   });
 }

@@ -1,13 +1,16 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, View } from 'react-native';
 
+import { Button } from '@/components/button';
 import { FriendAction } from '@/components/friend-action';
+import { InfoRows } from '@/components/info-rows';
 import { QueryState } from '@/components/query-state';
 import { StatTiles } from '@/components/stat-tiles';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { errorMessage } from '@/lib/api-error';
+import { formatPhone, padelProfileRows, whatsappUrl } from '@/lib/profile';
 import { usePlayerQuery } from '@/store/api';
 
 const RELATION_LABEL = {
@@ -18,7 +21,8 @@ const RELATION_LABEL = {
   REQUEST_RECEIVED: "Vous a envoyé une demande d'ami",
 } as const;
 
-// Profil d'un autre joueur : relation d'amitie et stats (si profil public ou ami).
+// Profil d'un autre joueur : profil padel, relation d'amitie, stats (si profil public ou ami)
+// et telephone / WhatsApp pour ses amis.
 export default function PlayerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: player, isLoading, error, refetch } = usePlayerQuery(id);
@@ -40,6 +44,21 @@ export default function PlayerScreen() {
           </View>
 
           <FriendAction userId={player.id} name={player.name} state={player.friendship} />
+
+          <InfoRows rows={padelProfileRows(player)} />
+
+          {player.phone ? (
+            <View style={styles.contact}>
+              <ThemedText type="small" themeColor="textSecondary">
+                Téléphone : {formatPhone(player.phone)}
+              </ThemedText>
+              <Button
+                title="Écrire sur WhatsApp"
+                variant="secondary"
+                onPress={() => void Linking.openURL(whatsappUrl(player.phone!))}
+              />
+            </View>
+          ) : null}
 
           {player.stats ? (
             <StatTiles wins={player.stats.wins} losses={player.stats.losses} />
@@ -67,6 +86,9 @@ const styles = StyleSheet.create({
   },
   identity: {
     gap: Spacing.one,
+  },
+  contact: {
+    gap: Spacing.two,
   },
   privateStats: {
     borderRadius: Spacing.three,

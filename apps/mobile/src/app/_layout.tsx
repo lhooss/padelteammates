@@ -54,6 +54,14 @@ function RootNavigator() {
             name="match/[id]/score"
             options={{ headerShown: true, title: 'Score du match', presentation: 'modal' }}
           />
+          <Stack.Screen
+            name="account/edit"
+            options={{ headerShown: true, title: 'Modifier le profil', presentation: 'modal' }}
+          />
+          <Stack.Screen
+            name="account/security"
+            options={{ headerShown: true, title: 'Email et mot de passe', presentation: 'modal' }}
+          />
         </Stack.Protected>
         <Stack.Protected guard={status !== 'signedIn'}>
           <Stack.Screen name="(auth)" />

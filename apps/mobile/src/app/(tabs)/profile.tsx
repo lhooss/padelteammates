@@ -1,6 +1,8 @@
+import { router } from 'expo-router';
 import { ScrollView, StyleSheet, Switch, View } from 'react-native';
 
 import { Button } from '@/components/button';
+import { InfoRows } from '@/components/info-rows';
 import { QueryState } from '@/components/query-state';
 import { Screen } from '@/components/screen';
 import { StatTiles } from '@/components/stat-tiles';
@@ -9,6 +11,7 @@ import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { errorMessage } from '@/lib/api-error';
+import { formatPhone, padelProfileRows } from '@/lib/profile';
 import { useMeQuery, useUpdateMeMutation } from '@/store/api';
 import { signedOut } from '@/store/auth-slice';
 import { useAppDispatch } from '@/store/hooks';
@@ -37,8 +40,28 @@ export default function ProfileScreen() {
 
         <StatTiles wins={me.wins} losses={me.losses} />
 
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <ThemedText type="smallBold" style={styles.flex}>
+              Profil padel
+            </ThemedText>
+            <Button
+              title="Modifier"
+              variant="secondary"
+              style={styles.compact}
+              onPress={() => router.push('/account/edit')}
+            />
+          </View>
+          <InfoRows
+            rows={[
+              ...padelProfileRows(me),
+              { label: 'Téléphone (amis)', value: me.phone ? formatPhone(me.phone) : null },
+            ]}
+          />
+        </View>
+
         <ThemedView type="backgroundElement" style={styles.row}>
-          <View style={styles.rowText}>
+          <View style={styles.flex}>
             <ThemedText type="smallBold">Profil public</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
               Vos statistiques sont visibles par tous et vous apparaissez au classement. Vos amis les voient
@@ -56,6 +79,7 @@ export default function ProfileScreen() {
           />
         </ThemedView>
 
+        <Button title="Email et mot de passe" variant="secondary" onPress={() => router.push('/account/security')} />
         <Button title="Se déconnecter" variant="danger" onPress={() => dispatch(signedOut())} />
       </ScrollView>
     </Screen>
@@ -68,6 +92,13 @@ const styles = StyleSheet.create({
     paddingBottom: BottomTabInset + Spacing.three,
     gap: Spacing.four,
   },
+  section: {
+    gap: Spacing.two,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -75,7 +106,11 @@ const styles = StyleSheet.create({
     borderRadius: Spacing.three,
     padding: Spacing.three,
   },
-  rowText: {
+  flex: {
     flex: 1,
+  },
+  compact: {
+    minHeight: 36,
+    paddingHorizontal: Spacing.three,
   },
 });

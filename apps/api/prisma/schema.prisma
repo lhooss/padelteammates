@@ -43,6 +43,14 @@ model User {
   wins          Int     @default(0)
   losses        Int     @default(0)
 
+  // Profil padel (modifiable par le joueur). Le telephone n'est visible que de ses amis.
+  preferredSide CourtSide?
+  level         PlayerLevel?
+  dominantHand  Hand?
+  phone         String? // format +212XXXXXXXXX
+  homeClubId    String?
+  homeClub      Club?        @relation("HomeClub", fields: [homeClubId], references: [id], onDelete: SetNull)
+
   createdMatches Match[]        @relation("CreatedBy")
   participations Participant[]
   notifications  Notification[]
@@ -85,11 +93,32 @@ model Club {
   city String @default("Kénitra")
 
   matches Match[]
+  members User[]  @relation("HomeClub") // joueurs dont c'est le club habituel
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([name, city])
+}
+
+// --- Profil padel ---
+
+enum CourtSide {
+  LEFT
+  RIGHT
+  BOTH
+}
+
+enum PlayerLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+enum Hand {
+  RIGHT
+  LEFT
 }
 
 model Match {

@@ -5,7 +5,13 @@ import {
   type FetchArgs,
   type FetchBaseQueryError,
 } from '@reduxjs/toolkit/query/react';
-import type { LoginInput, RegisterRequest, UpdateProfileInput } from '@padelteammates/shared';
+import type {
+  ChangeEmailInput,
+  ChangePasswordInput,
+  LoginInput,
+  RegisterRequest,
+  UpdateProfileRequest,
+} from '@padelteammates/shared';
 
 import type {
   AuthResponse,
@@ -66,9 +72,17 @@ export const api = createApi({
       query: () => '/auth/me',
       providesTags: ['Me'],
     }),
-    updateMe: build.mutation<User, UpdateProfileInput>({
+    // Profil : nom, profil public, profil padel, club habituel, telephone.
+    updateMe: build.mutation<User, UpdateProfileRequest>({
       query: (body) => ({ url: '/auth/me', method: 'PATCH', body }),
+      invalidatesTags: ['Me', 'Player'],
+    }),
+    changeEmail: build.mutation<User, ChangeEmailInput>({
+      query: (body) => ({ url: '/auth/me/email', method: 'PATCH', body }),
       invalidatesTags: ['Me'],
+    }),
+    changePassword: build.mutation<void, ChangePasswordInput>({
+      query: (body) => ({ url: '/auth/me/password', method: 'PATCH', body }),
     }),
 
     clubs: build.query<Club[], void>({
@@ -170,6 +184,8 @@ export const {
   useRegisterMutation,
   useMeQuery,
   useUpdateMeMutation,
+  useChangeEmailMutation,
+  useChangePasswordMutation,
   useClubsQuery,
   useWeeklyCalendarQuery,
   useMyMatchesQuery,

@@ -1,10 +1,19 @@
 // Formes des reponses de l'API (apps/api). Les dates arrivent en chaines ISO.
+import type { CourtSide, Hand, PlayerLevel } from '@padelteammates/shared';
 
 export type Team = 'A' | 'B';
 export type MatchStatus = 'PLANNED' | 'PENDING' | 'COMPLETED';
 export type PresenceStatus = 'INVITED' | 'CONFIRMED';
 
-export interface User {
+// Profil padel d'un joueur (visible de tous).
+export interface PadelProfile {
+  preferredSide: CourtSide | null;
+  level: PlayerLevel | null;
+  dominantHand: Hand | null;
+  homeClub: { id: string; name: string } | null;
+}
+
+export interface User extends PadelProfile {
   id: string;
   name: string;
   email: string;
@@ -12,6 +21,7 @@ export interface User {
   profilePublic: boolean;
   wins: number;
   losses: number;
+  phone: string | null; // +212XXXXXXXXX
   createdAt: string;
 }
 
@@ -81,9 +91,10 @@ export interface PlayerStats {
   winRate: number;
 }
 
-export interface PlayerProfile extends PlayerSummary {
+export interface PlayerProfile extends PlayerSummary, PadelProfile {
   profilePublic: boolean;
   friendship: FriendshipState;
+  phone: string | null; // seulement pour ses amis
   stats: PlayerStats | null; // null : profil prive et pas ami
 }
 

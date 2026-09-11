@@ -16,7 +16,18 @@ function statsOf(user: { wins: number; losses: number }) {
   };
 }
 
-const PROFILE_SELECT = { id: true, name: true, profilePublic: true, wins: true, losses: true } as const;
+const PROFILE_SELECT = {
+  id: true,
+  name: true,
+  profilePublic: true,
+  wins: true,
+  losses: true,
+  preferredSide: true,
+  level: true,
+  dominantHand: true,
+  phone: true,
+  homeClub: { select: { id: true, name: true } },
+} as const;
 
 // Stats d'un joueur : visibles si son profil est public, par ses amis, ou par lui-meme.
 export async function getPublicStats(viewerId: string, userId: string) {
@@ -27,20 +38,27 @@ export async function getPublicStats(viewerId: string, userId: string) {
   return { id: profile.id, name: profile.name, ...profile.stats };
 }
 
-// Profil d'un joueur vu par `viewerId` : relation d'amitie, et stats si elles sont visibles.
+// Profil d'un joueur vu par `viewerId` : profil padel (visible de tous), relation d'amitie,
+// stats si elles sont visibles, telephone seulement pour ses amis.
 export async function getProfile(viewerId: string, userId: string) {
   const user = await prisma.user.findUnique({ where: { id: userId }, select: PROFILE_SELECT });
   if (!user) throw new NotFoundError('Joueur introuvable');
 
   const friendship = viewerId === userId ? null : await findFriendship(viewerId, userId);
   const state = friendshipState(viewerId, userId, friendship);
-  const statsVisible = user.profilePublic || state === 'SELF' || state === 'FRIENDS';
+  const closeFriend = state === 'SELF' || state === 'FRIENDS';
+  const statsVisible = user.profilePublic || closeFriend;
 
   return {
     id: user.id,
     name: user.name,
     profilePublic: user.profilePublic,
     friendship: state,
+    preferredSide: user.preferredSide,
+    level: user.level,
+    dominantHand: user.dominantHand,
+    homeClub: user.homeClub,
+    phone: closeFriend ? user.phone : null,
     stats: statsVisible ? statsOf(user) : null,
   };
 }
