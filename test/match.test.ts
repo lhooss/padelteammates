@@ -1,9 +1,10 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../src/app.js';
-import { auth, registerAdmin, registerUser, resetDb, teardown, type TestUser } from './helpers.js';
+import { auth, dayFromToday, registerAdmin, registerUser, resetDb, teardown, type TestUser } from './helpers.js';
 
 const app = createApp();
+const MATCH_DAY = dayFromToday(7);
 
 beforeEach(resetDb);
 afterAll(teardown);
@@ -30,7 +31,7 @@ async function fourPlayers(): Promise<[TestUser, TestUser, TestUser, TestUser]> 
 function createMatchBody(clubId: string, p: TestUser[]) {
   return {
     clubId,
-    date: '2026-09-20',
+    date: MATCH_DAY,
     slot: '18:00-19:30',
     creatorTeam: 'A',
     invites: [
@@ -130,14 +131,14 @@ describe('Matchs — planification & invitations', () => {
     await request(app)
       .post('/api/matches')
       .set('Authorization', auth(p[0].token))
-      .send({ clubId, date: '2026-09-20', slot: '18:00-19:30', creatorTeam: 'A', invites: [] })
+      .send({ clubId, date: MATCH_DAY, slot: '18:00-19:30', creatorTeam: 'A', invites: [] })
       .expect(201);
 
     // Meme club + jour + creneau -> conflit.
     await request(app)
       .post('/api/matches')
       .set('Authorization', auth(other.token))
-      .send({ clubId, date: '2026-09-20', slot: '18:00-19:30', creatorTeam: 'B', invites: [] })
+      .send({ clubId, date: MATCH_DAY, slot: '18:00-19:30', creatorTeam: 'B', invites: [] })
       .expect(409);
   });
 
@@ -151,14 +152,14 @@ describe('Matchs — planification & invitations', () => {
       .expect(201);
 
     const cal = await request(app)
-      .get('/api/matches/calendar/weekly?from=2026-09-20')
+      .get(`/api/matches/calendar/weekly?from=${MATCH_DAY}`)
       .set('Authorization', auth(p[0].token))
       .expect(200);
     expect(cal.body).toHaveLength(1);
 
     // Une autre semaine ne doit rien renvoyer.
     const empty = await request(app)
-      .get('/api/matches/calendar/weekly?from=2026-10-20')
+      .get(`/api/matches/calendar/weekly?from=${dayFromToday(40)}`)
       .set('Authorization', auth(p[0].token))
       .expect(200);
     expect(empty.body).toHaveLength(0);

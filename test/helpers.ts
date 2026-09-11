@@ -55,3 +55,20 @@ export async function registerAdmin(app: Express): Promise<TestUser> {
 export function auth(token: string): string {
   return `Bearer ${token}`;
 }
+
+// Jour (AAAA-MM-JJ) situe `days` jours apres aujourd'hui :
+// les tests restent valides quelle que soit leur date d'execution.
+export function dayFromToday(days: number): string {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+// Simule un match deja joue : le deplace a la veille, son creneau est donc termine.
+// (L'API refuse de creer un match dans le passe.)
+export async function moveMatchToPast(matchId: string): Promise<void> {
+  const yesterday = new Date();
+  yesterday.setUTCHours(0, 0, 0, 0);
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  await prisma.match.update({ where: { id: matchId }, data: { date: yesterday } });
+}

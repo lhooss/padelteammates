@@ -31,7 +31,7 @@ Suite d'intégration **Vitest + Supertest** contre une vraie base Postgres/Redis
 
 ```bash
 docker compose up -d          # infra requise
-npm test                      # 21 tests: auth, clubs (admin), matchs, scores/validation/stats
+npm test                      # 29 tests: auth, clubs (admin), matchs, scores/validation/stats, creneaux
 ```
 
 Le `test/global-setup.ts` synchronise le schéma (`prisma db push`) et chaque test repart d'une base vide. Un fichier **`requests.http`** (REST Client) déroule le parcours complet à la main.
@@ -53,8 +53,9 @@ Le `test/global-setup.ts` synchronise le schéma (`prisma db push`) et chaque te
 - **Planification** : un joueur crée un match (club + créneau) et invite des joueurs inscrits qui confirment.
 - **Anti-conflit de créneau** : contrainte `@@unique([clubId, date, slot])` + vérification qu'aucun joueur n'est déjà pris sur ce créneau.
 - **Calendrier hebdomadaire** global (lundi→dimanche) consultable par tous.
-- **Saisie du résultat** par n'importe quel participant (composition finale, games, sets) — validée par Zod.
-- **Verrouillage** : le match passe `COMPLETED` dès que **≥ 2 des 4 participants** valident la saisie.
+- **Saisie du résultat** par n'importe quel participant **confirmé**, uniquement **à l'issue du créneau** (heure de Kénitra, `Africa/Casablanca`). Composition finale **2 contre 2** reprenant les 4 joueurs confirmés, games et sets — validée par Zod.
+- **Verrouillage** : le match passe `COMPLETED` dès qu'**au moins un joueur de chaque équipe** a validé la saisie (donc ≥ 2 des 4 participants — une équipe seule ne peut pas verrouiller son propre résultat). Une re-saisie remet les validations à zéro.
+- **Anti-course** : saisies et validations d'un même match sont sérialisées par un verrou Redis, et le passage `PENDING → COMPLETED` est gardé en base (les stats ne peuvent pas être comptées deux fois).
 - **Stats** mises à jour automatiquement à la validation ; **consultables seulement si `profilePublic = true`**.
 
 ## Endpoints principaux

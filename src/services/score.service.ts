@@ -1,17 +1,13 @@
-import type { Prisma } from '@prisma/client';
+import type { Prisma, Team } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../utils/errors.js';
+import { slotEnd } from '../utils/slot.js';
 import { applyStats, computeResult } from './stats.service.js';
 import { notifyMany } from './notification.service.js';
-import {
-  acquireLock,
-  clearActive,
-  markActive,
-  releaseLock,
-} from './activeMatch.service.js';
+import { clearActive, markActive, withMatchLock } from './activeMatch.service.js';
 import type { SubmitScoreInput } from '../schemas/score.schema.js';
 
-const VALIDATORS_REQUIRED = 2; // >= 2 des 4 participants (voir SDD)
+type Roster = { A: string[]; B: string[] };
 
 async function loadMatchOrThrow(matchId: string) {
   const match = await prisma.match.findUnique({
@@ -22,116 +18,135 @@ async function loadMatchOrThrow(matchId: string) {
   return match;
 }
 
-function assertParticipant(participantIds: Set<string>, userId: string): void {
-  if (!participantIds.has(userId)) {
+type LoadedMatch = Awaited<ReturnType<typeof loadMatchOrThrow>>;
+
+// Seuls les participants ayant confirme leur presence peuvent saisir ou valider un score.
+function assertConfirmedParticipant(match: LoadedMatch, userId: string): void {
+  const participant = match.participants.find((p) => p.userId === userId);
+  if (!participant) {
     throw new ForbiddenError('Seuls les participants du match peuvent agir sur le score');
   }
+  if (participant.presenceStatus !== 'CONFIRMED') {
+    throw new ForbiddenError('Confirmez votre participation avant d\'agir sur le score');
+  }
 }
 
-// Saisie (ou re-saisie) du resultat par un participant.
-// La saisie compte comme la 1ere validation de son auteur.
+// Equipes de la composition finale n'ayant encore aucun validateur.
+function teamsAwaitingValidation(teams: Roster, validators: Set<string>): Team[] {
+  return (['A', 'B'] as const).filter((team) => !teams[team].some((id) => validators.has(id)));
+}
+
+// Saisie (ou re-saisie) du resultat par un participant confirme, a l'issue du match.
+// La saisie compte comme la 1ere validation de son auteur (pour son equipe).
 export async function submitScore(userId: string, matchId: string, input: SubmitScoreInput) {
-  const match = await loadMatchOrThrow(matchId);
-  const participantIds = new Set(match.participants.map((p) => p.userId));
+  return withMatchLock(matchId, async () => {
+    const match = await loadMatchOrThrow(matchId);
 
-  assertParticipant(participantIds, userId);
-  if (match.status === 'COMPLETED') {
-    throw new BadRequestError('Le resultat de ce match est deja verrouille');
-  }
+    assertConfirmedParticipant(match, userId);
+    if (match.status === 'COMPLETED') {
+      throw new BadRequestError('Le resultat de ce match est deja verrouille');
+    }
+    if (Date.now() < slotEnd(match.date, match.slot).getTime()) {
+      throw new BadRequestError('Le resultat ne peut etre saisi qu\'a l\'issue du creneau du match');
+    }
 
-  // La composition finale ne peut contenir que des participants du match.
-  const roster = [...input.teams.A, ...input.teams.B];
-  const unknown = roster.filter((id) => !participantIds.has(id));
-  if (unknown.length > 0) {
-    throw new BadRequestError('La composition finale contient des joueurs non-participants');
-  }
+    // La composition finale (2 contre 2, validee par Zod) doit reprendre les 4 joueurs confirmes.
+    const confirmedIds = new Set(
+      match.participants.filter((p) => p.presenceStatus === 'CONFIRMED').map((p) => p.userId),
+    );
+    const roster = [...input.teams.A, ...input.teams.B];
+    if (roster.some((id) => !confirmedIds.has(id))) {
+      throw new BadRequestError('La composition finale doit reprendre les 4 joueurs confirmes du match');
+    }
 
-  const result = computeResult(input);
-  const setsDetail = { teams: input.teams, games: input.games } as unknown as Prisma.InputJsonValue;
+    const result = computeResult(input);
+    const setsDetail = { teams: input.teams, games: input.games } as unknown as Prisma.InputJsonValue;
 
-  const score = await prisma.$transaction(async (tx) => {
-    const saved = await tx.score.upsert({
-      where: { matchId },
-      create: {
-        matchId,
-        setsDetail,
-        gamesPlayed: result.gamesPlayed,
-        winningTeam: result.winningTeam,
-        enteredById: userId,
-        validators: [userId], // l'auteur valide de facto sa saisie
-      },
-      update: {
-        // Re-saisie: les donnees changent, on reinitialise les validations.
-        setsDetail,
-        gamesPlayed: result.gamesPlayed,
-        winningTeam: result.winningTeam,
-        enteredById: userId,
-        validators: [userId],
-      },
+    const score = await prisma.$transaction(async (tx) => {
+      const saved = await tx.score.upsert({
+        where: { matchId },
+        create: {
+          matchId,
+          setsDetail,
+          gamesPlayed: result.gamesPlayed,
+          winningTeam: result.winningTeam,
+          enteredById: userId,
+          validators: [userId], // l'auteur valide de facto sa saisie
+        },
+        update: {
+          // Re-saisie: les donnees changent, on reinitialise les validations.
+          setsDetail,
+          gamesPlayed: result.gamesPlayed,
+          winningTeam: result.winningTeam,
+          enteredById: userId,
+          validators: [userId],
+        },
+      });
+
+      await tx.match.update({ where: { id: matchId }, data: { status: 'PENDING' } });
+
+      const others = match.participants.filter((p) => p.userId !== userId).map((p) => p.userId);
+      await notifyMany(
+        others,
+        {
+          type: 'SCORE_ENTERED',
+          message: 'Un resultat a ete saisi. Merci de le valider ou de le corriger.',
+          matchId,
+        },
+        tx,
+      );
+
+      return saved;
     });
 
-    await tx.match.update({ where: { id: matchId }, data: { status: 'PENDING' } });
+    await markActive({
+      matchId,
+      enteredById: userId,
+      validators: score.validators,
+      updatedAt: new Date().toISOString(),
+    });
 
-    const others = match.participants.filter((p) => p.userId !== userId).map((p) => p.userId);
-    await notifyMany(
-      others,
-      {
-        type: 'SCORE_ENTERED',
-        message: 'Un resultat a ete saisi. Merci de le valider ou de le corriger.',
-        matchId,
-      },
-      tx,
-    );
-
-    return saved;
+    return score;
   });
-
-  await markActive({
-    matchId,
-    enteredById: userId,
-    validators: score.validators,
-    updatedAt: new Date().toISOString(),
-  });
-
-  return score;
 }
 
-// Validation d'une saisie par un participant.
-// Verrouille le match (COMPLETED) et calcule les stats des que 2 participants ont valide.
+// Validation d'une saisie par un participant confirme.
+// Le match est verrouille (COMPLETED) et les stats calculees des qu'au moins un joueur
+// de chaque equipe a valide : >= 2 des 4 participants (SDD), jamais une equipe seule.
 export async function validateScore(userId: string, matchId: string) {
-  const locked = await acquireLock(matchId);
-  if (!locked) {
-    throw new ConflictError('Validation concurrente en cours, reessayez');
-  }
-
-  try {
+  return withMatchLock(matchId, async () => {
     const match = await loadMatchOrThrow(matchId);
-    const participantIds = new Set(match.participants.map((p) => p.userId));
-    assertParticipant(participantIds, userId);
+    assertConfirmedParticipant(match, userId);
 
-    if (!match.score) throw new BadRequestError('Aucun resultat n\'a encore ete saisi');
+    const score = match.score;
+    if (!score) throw new BadRequestError('Aucun resultat n\'a encore ete saisi');
     if (match.status === 'COMPLETED') {
       throw new BadRequestError('Le resultat est deja verrouille');
     }
 
-    // On ne compte que des validateurs qui sont bien des participants, sans doublon.
-    const validators = new Set(match.score.validators.filter((id) => participantIds.has(id)));
-    validators.add(userId);
+    // On ne compte que des joueurs de la composition finale, sans doublon.
+    const { teams } = score.setsDetail as unknown as { teams: Roster };
+    const rosterIds = new Set([...teams.A, ...teams.B]);
+    const validators = new Set([...score.validators, userId].filter((id) => rosterIds.has(id)));
     const validatorList = [...validators];
+    const awaitingTeams = teamsAwaitingValidation(teams, validators);
 
-    const setsDetail = match.score.setsDetail as unknown as {
-      teams: { A: string[]; B: string[] };
-    };
-
-    if (validatorList.length >= VALIDATORS_REQUIRED) {
+    if (awaitingTeams.length === 0) {
       // Verrouillage + stats, de maniere atomique.
       const updated = await prisma.$transaction(async (tx) => {
+        // Garde-fou en base, en plus du verrou Redis : un seul passage PENDING -> COMPLETED,
+        // les stats ne peuvent donc jamais etre appliquees deux fois.
+        const { count } = await tx.match.updateMany({
+          where: { id: matchId, status: 'PENDING' },
+          data: { status: 'COMPLETED' },
+        });
+        if (count !== 1) throw new ConflictError('Le resultat a deja ete verrouille');
+
         const savedScore = await tx.score.update({
           where: { matchId },
           data: { validators: validatorList },
         });
-        await tx.match.update({ where: { id: matchId }, data: { status: 'COMPLETED' } });
-        await applyStats(tx, setsDetail.teams, match.score!.winningTeam);
+        await applyStats(tx, teams, score.winningTeam);
         await notifyMany(
           match.participants.map((p) => p.userId),
           {
@@ -148,22 +163,20 @@ export async function validateScore(userId: string, matchId: string) {
       return { score: updated, status: 'COMPLETED' as const };
     }
 
-    // Pas encore assez de validations: on enregistre et on garde la session active.
+    // Une equipe n'a pas encore valide : on enregistre et on garde la session active.
     const savedScore = await prisma.score.update({
       where: { matchId },
       data: { validators: validatorList },
     });
     await markActive({
       matchId,
-      enteredById: match.score.enteredById,
+      enteredById: score.enteredById,
       validators: validatorList,
       updatedAt: new Date().toISOString(),
     });
 
-    return { score: savedScore, status: 'PENDING' as const };
-  } finally {
-    await releaseLock(matchId);
-  }
+    return { score: savedScore, status: 'PENDING' as const, awaitingTeams };
+  });
 }
 
 export async function getScore(matchId: string) {

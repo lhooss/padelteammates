@@ -83,7 +83,7 @@ Content-Type: application/json
 
 ### --- PLANIFICATION ---
 
-### 8. Joueur 1 cree un match et invite 2, 3, 4
+### 8. Joueur 1 cree un match et invite 2, 3, 4 (la date doit etre aujourd'hui ou dans le futur)
 # @name createMatch
 POST {{baseUrl}}/api/matches
 Authorization: Bearer {{token1}}
@@ -134,8 +134,11 @@ GET {{baseUrl}}/api/matches/calendar/weekly?from=2026-09-20
 Authorization: Bearer {{token1}}
 
 ### --- SCORES ---
+### Le resultat ne se saisit qu'a l'issue du creneau (heure de Kenitra). Pour tester tout de suite,
+### deplacer le match a la veille (remplacer <matchId>) :
+###   docker exec padel_postgres psql -U postgres -d padel_teamates -c "UPDATE \"Match\" SET date = CURRENT_DATE - 1 WHERE id = '<matchId>'"
 
-### 12. Joueur 1 saisit le resultat (= 1re validation). Equipe A gagne 2-1
+### 12. Joueur 1 saisit le resultat (= validation de l'equipe A). Equipe A gagne 2-1
 POST {{baseUrl}}/api/matches/{{matchId}}/score
 Authorization: Bearer {{token1}}
 Content-Type: application/json
@@ -149,18 +152,22 @@ Content-Type: application/json
   ]
 }
 
-### 13. Joueur 2 valide -> 2/4 atteint -> match COMPLETED + stats
+### 13. Joueur 2 (coequipier) valide -> reste PENDING (awaitingTeams: ["B"]) : il faut un validateur par equipe
 POST {{baseUrl}}/api/matches/{{matchId}}/score/validate
 Authorization: Bearer {{token2}}
 
-### 14. Stats publiques du joueur 1 (gagnant, profil public)
+### 14. Joueur 3 (equipe adverse) valide -> match COMPLETED + stats
+POST {{baseUrl}}/api/matches/{{matchId}}/score/validate
+Authorization: Bearer {{token3}}
+
+### 15. Stats publiques du joueur 1 (gagnant, profil public)
 GET {{baseUrl}}/api/users/{{user1}}/stats
 Authorization: Bearer {{token1}}
 
-### 15. Stats du joueur 3 (perdant, profil PRIVE -> 403 attendu)
+### 16. Stats du joueur 3 (perdant, profil PRIVE -> 403 attendu)
 GET {{baseUrl}}/api/users/{{user3}}/stats
 Authorization: Bearer {{token1}}
 
-### 16. Classement (profils publics)
+### 17. Classement (profils publics)
 GET {{baseUrl}}/api/users/leaderboard
 Authorization: Bearer {{token1}}

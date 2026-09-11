@@ -14,11 +14,11 @@ const gameSchema = z.object({
   sets: z.array(setSchema).min(1).max(5),
 });
 
-const rosterSchema = z.array(z.string().cuid()).min(1).max(2);
+const rosterSchema = z.array(z.string().cuid()).length(2, 'Chaque equipe compte exactement 2 joueurs');
 
 export const submitScoreSchema = z
   .object({
-    // Composition finale des equipes (peut differer de l'invitation initiale).
+    // Composition finale des equipes, 2 contre 2 (peut differer de l'invitation initiale).
     teams: z.object({
       A: rosterSchema,
       B: rosterSchema,
