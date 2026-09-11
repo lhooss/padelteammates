@@ -1,0 +1,39 @@
+# Infra locale pour Padelteammates (dev + tests).
+# Usage: docker compose up -d   puis   npm run prisma:migrate && npm run seed
+# Le nom de projet est epingle pour rester stable meme si le dossier est renomme
+# (conserve l'association aux conteneurs/volume existants).
+name: padel-teamates
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: padel_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: padel_teamates
+    ports:
+      # Hote 5433 -> conteneur 5432 (evite un conflit avec un Postgres local sur 5432)
+      - '5433:5432'
+    volumes:
+      - padel_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: padel_redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  padel_pgdata:

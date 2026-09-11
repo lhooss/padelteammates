@@ -1,0 +1,166 @@
+### Padelteammates — parcours complet (REST Client VS Code / IntelliJ HTTP)
+### Prerequis: docker compose up -d && npm run prisma:migrate && npm run seed && npm run dev
+
+@baseUrl = http://localhost:3001
+@adminEmail = admin@padel-kenitra.ma
+@adminPassword = ChangeMe123!
+
+### 0. Health
+GET {{baseUrl}}/health
+
+### --- ADMIN ---
+
+### 1. Login admin (seed)
+# @name loginAdmin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{ "email": "{{adminEmail}}", "password": "{{adminPassword}}" }
+
+###
+@adminToken = {{loginAdmin.response.body.token}}
+
+### 2. Lister les clubs de Kenitra
+GET {{baseUrl}}/api/clubs
+Authorization: Bearer {{adminToken}}
+
+### 3. (Admin) creer un club
+# @name createClub
+POST {{baseUrl}}/api/clubs
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "name": "Nouveau Club Padel", "city": "Kénitra" }
+
+###
+@clubId = {{createClub.response.body.id}}
+
+### --- JOUEURS ---
+
+### 4. Inscription joueur 1 (createur)
+# @name reg1
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{ "name": "Youssef", "email": "youssef@example.com", "password": "password123", "profilePublic": true }
+
+###
+@token1 = {{reg1.response.body.token}}
+@user1 = {{reg1.response.body.user.id}}
+
+### 5. Inscription joueur 2
+# @name reg2
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{ "name": "Sara", "email": "sara@example.com", "password": "password123", "profilePublic": true }
+
+###
+@token2 = {{reg2.response.body.token}}
+@user2 = {{reg2.response.body.user.id}}
+
+### 6. Inscription joueur 3
+# @name reg3
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{ "name": "Mehdi", "email": "mehdi@example.com", "password": "password123" }
+
+###
+@token3 = {{reg3.response.body.token}}
+@user3 = {{reg3.response.body.user.id}}
+
+### 7. Inscription joueur 4
+# @name reg4
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{ "name": "Amine", "email": "amine@example.com", "password": "password123" }
+
+###
+@token4 = {{reg4.response.body.token}}
+@user4 = {{reg4.response.body.user.id}}
+
+### --- PLANIFICATION ---
+
+### 8. Joueur 1 cree un match et invite 2, 3, 4
+# @name createMatch
+POST {{baseUrl}}/api/matches
+Authorization: Bearer {{token1}}
+Content-Type: application/json
+
+{
+  "clubId": "{{clubId}}",
+  "date": "2026-09-20",
+  "slot": "18:00-19:30",
+  "creatorTeam": "A",
+  "invites": [
+    { "userId": "{{user2}}", "team": "A" },
+    { "userId": "{{user3}}", "team": "B" },
+    { "userId": "{{user4}}", "team": "B" }
+  ]
+}
+
+###
+@matchId = {{createMatch.response.body.id}}
+
+### 9. Joueur 2 voit ses notifications (invitation)
+GET {{baseUrl}}/api/notifications?unread=true
+Authorization: Bearer {{token2}}
+
+### 10. Joueurs 2, 3, 4 acceptent
+POST {{baseUrl}}/api/matches/{{matchId}}/respond
+Authorization: Bearer {{token2}}
+Content-Type: application/json
+
+{ "accept": true }
+
+###
+POST {{baseUrl}}/api/matches/{{matchId}}/respond
+Authorization: Bearer {{token3}}
+Content-Type: application/json
+
+{ "accept": true }
+
+###
+POST {{baseUrl}}/api/matches/{{matchId}}/respond
+Authorization: Bearer {{token4}}
+Content-Type: application/json
+
+{ "accept": true }
+
+### 11. Calendrier hebdomadaire (semaine du match)
+GET {{baseUrl}}/api/matches/calendar/weekly?from=2026-09-20
+Authorization: Bearer {{token1}}
+
+### --- SCORES ---
+
+### 12. Joueur 1 saisit le resultat (= 1re validation). Equipe A gagne 2-1
+POST {{baseUrl}}/api/matches/{{matchId}}/score
+Authorization: Bearer {{token1}}
+Content-Type: application/json
+
+{
+  "teams": { "A": ["{{user1}}", "{{user2}}"], "B": ["{{user3}}", "{{user4}}"] },
+  "games": [
+    { "sets": [ { "a": 6, "b": 4 }, { "a": 6, "b": 3 } ] },
+    { "sets": [ { "a": 2, "b": 6 }, { "a": 4, "b": 6 } ] },
+    { "sets": [ { "a": 7, "b": 5 }, { "a": 3, "b": 6 }, { "a": 6, "b": 2 } ] }
+  ]
+}
+
+### 13. Joueur 2 valide -> 2/4 atteint -> match COMPLETED + stats
+POST {{baseUrl}}/api/matches/{{matchId}}/score/validate
+Authorization: Bearer {{token2}}
+
+### 14. Stats publiques du joueur 1 (gagnant, profil public)
+GET {{baseUrl}}/api/users/{{user1}}/stats
+Authorization: Bearer {{token1}}
+
+### 15. Stats du joueur 3 (perdant, profil PRIVE -> 403 attendu)
+GET {{baseUrl}}/api/users/{{user3}}/stats
+Authorization: Bearer {{token1}}
+
+### 16. Classement (profils publics)
+GET {{baseUrl}}/api/users/leaderboard
+Authorization: Bearer {{token1}}

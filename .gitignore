@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+.claude/settings.local.json
+*.log
+.DS_Store
+prisma/*.db
+prisma/*.db-journal

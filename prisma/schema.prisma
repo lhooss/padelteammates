@@ -1,0 +1,142 @@
+// Padel App v0 - schema relationnel
+// Voir SDD: User / Club / Match / Participant / Score (+ Notification in-app)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum MatchStatus {
+  PLANNED // cree, joueurs invites
+  PENDING // score saisi, en attente de validation (>= 2/4)
+  COMPLETED // verrouille
+}
+
+enum Team {
+  A
+  B
+}
+
+enum PresenceStatus {
+  INVITED
+  CONFIRMED
+}
+
+model User {
+  id           String  @id @default(cuid())
+  name         String
+  email        String  @unique
+  passwordHash String
+  role         Role    @default(USER)
+
+  // Stats globales (mises a jour apres validation d'un score)
+  profilePublic Boolean @default(false)
+  wins          Int     @default(0)
+  losses        Int     @default(0)
+
+  createdMatches Match[]        @relation("CreatedBy")
+  participations Participant[]
+  notifications  Notification[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Club {
+  id   String @id @default(cuid())
+  name String
+  city String @default("Kénitra")
+
+  matches Match[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([name, city])
+}
+
+model Match {
+  id     String      @id @default(cuid())
+  date   DateTime // jour du match (minuit UTC)
+  slot   String // creneau, ex: "18:00-19:30"
+  status MatchStatus @default(PLANNED)
+
+  clubId String
+  club   Club   @relation(fields: [clubId], references: [id])
+
+  createdById String
+  createdBy   User   @relation("CreatedBy", fields: [createdById], references: [id])
+
+  participants Participant[]
+  score        Score?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Empeche les conflits de creneau: un club ne peut avoir 2 matchs
+  // sur le meme jour + creneau.
+  @@unique([clubId, date, slot])
+  @@index([date])
+}
+
+model Participant {
+  id             String         @id @default(cuid())
+  team           Team
+  presenceStatus PresenceStatus @default(INVITED)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  matchId String
+  match   Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, matchId])
+  @@index([matchId])
+}
+
+model Score {
+  id String @id @default(cuid())
+
+  matchId String @unique
+  match   Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  // Composition finale + detail des sets, valide par Zod avant insertion.
+  // Forme: { teams: { A: string[], B: string[] }, games: [{ sets: [{a,b}] }] }
+  setsDetail  Json
+  gamesPlayed Int
+  winningTeam Team?
+
+  // userIds ayant approuve la saisie. Verrouillage quand length >= 2.
+  validators  String[] @default([])
+  enteredById String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Notification {
+  id      String  @id @default(cuid())
+  type    String // INVITE | SCORE_ENTERED | SCORE_VALIDATED | MATCH_COMPLETED
+  message String
+  read    Boolean @default(false)
+  matchId String?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+}
