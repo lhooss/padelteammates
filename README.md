@@ -1,5 +1,7 @@
 # Padelteammates — v0
 
+[![CI](https://github.com/lhooss/padelteammates/actions/workflows/ci.yml/badge.svg)](https://github.com/lhooss/padelteammates/actions/workflows/ci.yml)
+
 Monorepo de l'app de padel de Kénitra : organisation de matchs, invitations, saisie et **validation communautaire** des scores, statistiques de joueurs.
 
 | Workspace | Rôle |
