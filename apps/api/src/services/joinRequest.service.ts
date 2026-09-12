@@ -2,7 +2,7 @@ import type { Team } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 import { ConflictError, ForbiddenError, NotFoundError } from '../utils/errors.js';
 import { formatMatchDay } from '../utils/format.js';
-import { assertNoSlotClash, assertOpenForNewPlayers, getMatch } from './match.service.js';
+import { assertNoSlotClash, assertOpenForNewPlayers, canView, getMatch } from './match.service.js';
 import { notify } from './notification.service.js';
 
 // Demandes pour rejoindre un match depuis le calendrier. N'importe quel joueur peut
@@ -28,6 +28,8 @@ function describeMatch(match: { date: Date; slot: string }): string {
 
 export async function requestToJoin(userId: string, matchId: string, team: Team) {
   const match = await loadMatch(matchId);
+  // On ne demande pas une place dans un match qu'on ne voit pas.
+  if (!(await canView(userId, match))) throw new NotFoundError('Match introuvable');
   assertOpenForNewPlayers(match);
   if (match.participants.some((p) => p.userId === userId)) {
     throw new ConflictError('Vous participez deja a ce match');

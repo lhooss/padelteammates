@@ -1,4 +1,4 @@
-import type { MatchStatus } from '@prisma/client';
+import type { MatchStatus, MatchVisibility } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../utils/errors.js';
 import { formatMatchDay } from '../utils/format.js';
@@ -103,6 +103,7 @@ export async function createMatch(creatorId: string, input: CreateMatchInput) {
         clubId: input.clubId,
         date: day,
         slot: input.slot,
+        visibility: input.visibility,
         createdById: creatorId,
         participants: {
           create: [
@@ -266,6 +267,40 @@ export async function getMatch(matchId: string) {
   return match;
 }
 
+// Qui voit un match : ses joueurs toujours, les autres selon la visibilite choisie
+// par l'organisateur.
+export async function canView(
+  viewerId: string,
+  match: { visibility: MatchVisibility; createdById: string; participants: { userId: string }[] },
+): Promise<boolean> {
+  if (match.participants.some((p) => p.userId === viewerId)) return true;
+  if (match.visibility === 'PUBLIC') return true;
+  if (match.visibility === 'PRIVATE') return false;
+  return (await friendIds(match.createdById)).has(viewerId);
+}
+
+// Lecture d'un match par un joueur donne. Un match qu'il ne voit pas est introuvable
+// (404 et non 403 : un match prive ne revele meme pas son existence).
+export async function getMatchFor(viewerId: string, matchId: string) {
+  const match = await getMatch(matchId);
+  if (!(await canView(viewerId, match))) throw new NotFoundError('Match introuvable');
+  return match;
+}
+
+// Changement de visibilite par l'organisateur, tant que le match est planifie.
+export async function setVisibility(userId: string, matchId: string, visibility: MatchVisibility) {
+  const match = await prisma.match.findUnique({ where: { id: matchId } });
+  if (!match) throw new NotFoundError('Match introuvable');
+  if (match.createdById !== userId) {
+    throw new ForbiddenError('Seul l\'organisateur peut changer la visibilite du match');
+  }
+  if (match.status !== 'PLANNED') {
+    throw new BadRequestError('La visibilite d\'un match joue ne change plus');
+  }
+  await prisma.match.update({ where: { id: matchId }, data: { visibility } });
+  return getMatch(matchId);
+}
+
 // Mes matchs : ceux ou je joue (ou suis invite) et ceux que j'ai demande a rejoindre.
 export function listMyMatches(userId: string) {
   return prisma.match.findMany({
@@ -279,12 +314,19 @@ export function listMyMatches(userId: string) {
 
 // Calendrier hebdomadaire global de la communaute. Chacun n'y voit que sa propre
 // demande pour rejoindre : les autres restent entre leur auteur et l'organisateur.
-export function weeklyCalendar(viewerId: string, ref: Date, clubId?: string) {
+export async function weeklyCalendar(viewerId: string, ref: Date, clubId?: string) {
   const { start, end } = weekBounds(ref);
+  const friends = await friendIds(viewerId);
   return prisma.match.findMany({
     where: {
       date: { gte: start, lt: end },
       ...(clubId ? { clubId } : {}),
+      // Visibilite : public, amis de l'organisateur, ou mes propres matchs.
+      OR: [
+        { visibility: 'PUBLIC' },
+        { visibility: 'FRIENDS', createdById: { in: [...friends] } },
+        { participants: { some: { userId: viewerId } } },
+      ],
     },
     include: {
       club: true,

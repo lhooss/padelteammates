@@ -5,6 +5,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import type { Participant, Team } from '@/api/types';
 import { Button } from '@/components/button';
+import { Chip } from '@/components/chip';
 import { InviteFriendsPicker, toInvites, type InviteRoles } from '@/components/invite-friends-picker';
 import { MatchCard } from '@/components/match-card';
 import { QueryState } from '@/components/query-state';
@@ -14,12 +15,14 @@ import { Spacing } from '@/constants/theme';
 import { errorMessage } from '@/lib/api-error';
 import { confirmAction } from '@/lib/confirm';
 import { freeSpots } from '@/lib/matches';
+import { VISIBILITY_HINT, VISIBILITY_LABEL, VISIBILITY_OPTIONS } from '@/lib/visibility';
 import {
   useFriendsQuery,
   useInvitePlayersMutation,
   useLeaveMatchMutation,
   useMatchQuery,
   useMeQuery,
+  useSetMatchVisibilityMutation,
 } from '@/store/api';
 
 // Composition d'un match deja cree (organisateur) : retirer un joueur, completer
@@ -31,6 +34,8 @@ export default function MatchPlayersScreen() {
   const { data: friends } = useFriendsQuery();
   const [invitePlayers, { isLoading: sending, error: sendError }] = useInvitePlayersMutation();
   const [removePlayer, { isLoading: removing, error: removeError }] = useLeaveMatchMutation();
+  const [setMatchVisibility, { isLoading: savingVisibility, error: visibilityError }] =
+    useSetMatchVisibilityMutation();
   const [roles, setRoles] = useState<InviteRoles>({});
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -103,6 +108,26 @@ export default function MatchPlayersScreen() {
           </View>
         ) : null}
 
+        <View style={styles.section}>
+          <ThemedText type="smallBold">Qui voit ce match ?</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            {VISIBILITY_HINT[match.visibility]}
+          </ThemedText>
+          <View style={styles.wrap}>
+            {VISIBILITY_OPTIONS.map((option) => (
+              <Chip
+                key={option}
+                label={VISIBILITY_LABEL[option]}
+                selected={match.visibility === option}
+                disabled={savingVisibility}
+                onPress={() => {
+                  void setMatchVisibility({ matchId, visibility: option });
+                }}
+              />
+            ))}
+          </View>
+        </View>
+
         {capacity.partner + capacity.opponent === 0 ? (
           <ThemedText themeColor="textSecondary">Le match est complet.</ThemedText>
         ) : (
@@ -115,9 +140,9 @@ export default function MatchPlayersScreen() {
           </View>
         )}
 
-        {formError || sendError || removeError ? (
+        {formError || sendError || removeError || visibilityError ? (
           <ThemedText themeColor="danger">
-            {formError ?? errorMessage(sendError) ?? errorMessage(removeError)}
+            {formError ?? errorMessage(sendError) ?? errorMessage(removeError) ?? errorMessage(visibilityError)}
           </ThemedText>
         ) : null}
         <Button
@@ -150,6 +175,11 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.six,
   },
   section: {
+    gap: Spacing.two,
+  },
+  wrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: Spacing.two,
   },
   playerRow: {

@@ -3,6 +3,8 @@ import type { CourtSide, FrmtCategory, Hand, PlayerLevel } from '@padelteammates
 
 export type Team = 'A' | 'B';
 export type MatchStatus = 'PLANNED' | 'PENDING' | 'COMPLETED';
+// Qui voit le match : toute la communaute, les amis de l'organisateur, ses joueurs.
+export type MatchVisibility = 'PUBLIC' | 'FRIENDS' | 'PRIVATE';
 export type PresenceStatus = 'INVITED' | 'CONFIRMED';
 
 // Profil padel d'un joueur (visible de tous).
@@ -126,6 +128,7 @@ export interface CreateMatchRequest {
   slot: string; // "HH:MM-HH:MM"
   creatorTeam: Team;
   invites: { userId: string; team: Team }[];
+  visibility: MatchVisibility;
 }
 
 // Demande d'un joueur pour rejoindre un match, en attente de l'organisateur.
@@ -143,6 +146,7 @@ export interface Match {
   date: string; // jour du match, minuit UTC
   slot: string; // "18:00-19:30", heure de Kenitra
   status: MatchStatus;
+  visibility: MatchVisibility;
   clubId: string;
   createdById: string;
   courtBookedAt: string | null; // null : terrain pas encore reserve au club

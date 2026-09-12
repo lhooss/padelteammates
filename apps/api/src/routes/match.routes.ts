@@ -9,6 +9,7 @@ import {
   joinRequestSchema,
   respondInviteSchema,
   submitScoreSchema,
+  updateVisibilitySchema,
   weeklyCalendarSchema,
   type WeeklyCalendarInput,
 } from '@padelteammates/shared';
@@ -48,10 +49,20 @@ matchRouter.post(
   }),
 );
 
+// Un match que le joueur ne voit pas est introuvable (404), y compris par lien direct.
 matchRouter.get(
   '/:id',
   asyncHandler(async (req, res) => {
-    res.json(await matchService.getMatch(req.params.id!));
+    res.json(await matchService.getMatchFor(req.auth!.userId, req.params.id!));
+  }),
+);
+
+// Visibilite du match : toute la communaute, les amis de l'organisateur, ou ses joueurs.
+matchRouter.patch(
+  '/:id/visibility',
+  validate(updateVisibilitySchema),
+  asyncHandler(async (req, res) => {
+    res.json(await matchService.setVisibility(req.auth!.userId, req.params.id!, req.body.visibility));
   }),
 );
 

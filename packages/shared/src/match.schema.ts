@@ -23,6 +23,13 @@ const inviteSchema = z.object({
   team: teamSchema,
 });
 
+// Qui voit le match : toute la communaute, les amis de l'organisateur, ou ses seuls joueurs.
+export const matchVisibilitySchema = z.enum(['PUBLIC', 'FRIENDS', 'PRIVATE']);
+
+export const updateVisibilitySchema = z.object({
+  visibility: matchVisibilitySchema,
+});
+
 export const createMatchSchema = z
   .object({
     clubId: z.string().cuid(),
@@ -30,6 +37,7 @@ export const createMatchSchema = z
     slot: slotSchema,
     creatorTeam: teamSchema,
     invites: z.array(inviteSchema).max(3).default([]),
+    visibility: matchVisibilitySchema.default('PUBLIC'),
   })
   .superRefine((data, ctx) => {
     const all = [{ userId: '__creator__', team: data.creatorTeam }, ...data.invites];
@@ -89,4 +97,6 @@ export type CreateMatchInput = z.infer<typeof createMatchSchema>;
 export type RespondInviteInput = z.infer<typeof respondInviteSchema>;
 export type AddInvitesInput = z.infer<typeof addInvitesSchema>;
 export type CourtBookingInput = z.infer<typeof courtBookingSchema>;
+export type MatchVisibility = z.infer<typeof matchVisibilitySchema>;
+export type UpdateVisibilityInput = z.infer<typeof updateVisibilitySchema>;
 export type WeeklyCalendarInput = z.infer<typeof weeklyCalendarSchema>;

@@ -232,6 +232,40 @@ Content-Type: application/json
 
 { "booked": false }
 
+### --- VISIBILITE DU MATCH ---
+### A la creation, le champ "visibility" vaut PUBLIC par defaut. Valeurs possibles :
+### PUBLIC (toute la communaute), FRIENDS (les amis de l'organisateur), PRIVATE
+### (les joueurs du match seulement). Les joueurs du match le voient toujours.
+
+### 27. L'organisateur reserve son match a ses amis
+PATCH {{baseUrl}}/api/matches/{{matchId}}/visibility
+Authorization: Bearer {{token1}}
+Content-Type: application/json
+
+{ "visibility": "FRIENDS" }
+
+### 28. Un joueur ne peut pas changer la visibilite du match d'un autre (403 attendu)
+PATCH {{baseUrl}}/api/matches/{{matchId}}/visibility
+Authorization: Bearer {{token2}}
+Content-Type: application/json
+
+{ "visibility": "PUBLIC" }
+
+### 29. Match rendu prive
+PATCH {{baseUrl}}/api/matches/{{matchId}}/visibility
+Authorization: Bearer {{token1}}
+Content-Type: application/json
+
+{ "visibility": "PRIVATE" }
+
+### 30. L'admin (non participant) ne le trouve plus : 404 attendu, pas 403
+GET {{baseUrl}}/api/matches/{{matchId}}
+Authorization: Bearer {{adminToken}}
+
+### 31. Le calendrier de l'admin ne le contient plus
+GET {{baseUrl}}/api/matches/calendar/weekly?from=2026-09-20
+Authorization: Bearer {{adminToken}}
+
 ### 17. Classement (profils publics)
 GET {{baseUrl}}/api/users/leaderboard
 Authorization: Bearer {{token1}}

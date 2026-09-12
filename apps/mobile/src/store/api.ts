@@ -29,6 +29,7 @@ import type {
   FrmtSummary,
   JoinRequest,
   Match,
+  MatchVisibility,
   PlayerProfile,
   PlayerSearchResult,
   PlayerSummary,
@@ -151,6 +152,15 @@ export const api = createApi({
       invalidatesTags: ['Match'],
     }),
 
+    // Visibilite du match, changee par l'organisateur.
+    setMatchVisibility: build.mutation<Match, { matchId: string; visibility: MatchVisibility }>({
+      query: ({ matchId, visibility }) => ({
+        url: `/matches/${matchId}/visibility`,
+        method: 'PATCH',
+        body: { visibility },
+      }),
+      invalidatesTags: ['Match'],
+    }),
     // Reservation du terrain au club, confirmee par n'importe quel joueur du match.
     setCourtBooking: build.mutation<Match, { matchId: string; booked: boolean }>({
       query: ({ matchId, booked }) => ({ url: `/matches/${matchId}/booking`, method: 'POST', body: { booked } }),
@@ -291,6 +301,7 @@ export const {
   useCreateMatchMutation,
   useInvitePlayersMutation,
   useRespondInviteMutation,
+  useSetMatchVisibilityMutation,
   useSetCourtBookingMutation,
   useCancelMatchMutation,
   useLeaveMatchMutation,

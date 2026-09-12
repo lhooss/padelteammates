@@ -11,6 +11,7 @@ import { FontFamily, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { formatDay } from '@/lib/dates';
 import { teamInScore } from '@/lib/matches';
+import { visibilityTag } from '@/lib/visibility';
 
 // Carte de match : heure et club, puis le terrain vu du dessus avec les joueurs
 // dans leurs carres de service (places libres en pointilles), puis le score s'il existe.
@@ -30,6 +31,14 @@ export function MatchCard({
   const theme = useTheme();
   const [start, end] = match.slot.split('-');
   const when = [showDate ? capitalize(formatDay(match.date)) : null, highlight ? 'Vous jouez' : null]
+    .filter(Boolean)
+    .join(' · ');
+  // Reservation du terrain (tant que le match est planifie) et visibilite si elle
+  // n'est pas publique : deux informations breves, sur une seule ligne.
+  const tags = [
+    match.status === 'PLANNED' ? (match.courtBookedAt ? 'Terrain réservé' : 'Terrain à réserver') : null,
+    visibilityTag(match),
+  ]
     .filter(Boolean)
     .join(' · ');
   const team = (t: Team): CourtPlayer[] =>
@@ -61,9 +70,9 @@ export function MatchCard({
               {when}
             </ThemedText>
           ) : null}
-          {match.status === 'PLANNED' ? (
-            <ThemedText type="small" themeColor={match.courtBookedAt ? 'text' : 'textSecondary'} numberOfLines={1}>
-              {match.courtBookedAt ? 'Terrain réservé' : 'Terrain à réserver'}
+          {tags ? (
+            <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+              {tags}
             </ThemedText>
           ) : null}
         </View>

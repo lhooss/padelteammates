@@ -26,6 +26,13 @@ enum Team {
   B
 }
 
+// Qui voit le match, au choix de l'organisateur. Ses joueurs le voient toujours.
+enum MatchVisibility {
+  PUBLIC // toute la communaute
+  FRIENDS // les amis de l'organisateur
+  PRIVATE // les joueurs du match uniquement
+}
+
 enum PresenceStatus {
   INVITED
   CONFIRMED
@@ -126,10 +133,11 @@ enum Hand {
 }
 
 model Match {
-  id     String      @id @default(cuid())
-  date   DateTime // jour du match (minuit UTC)
-  slot   String // creneau, ex: "18:00-19:30"
-  status MatchStatus @default(PLANNED)
+  id         String          @id @default(cuid())
+  date       DateTime // jour du match (minuit UTC)
+  slot       String // creneau, ex: "18:00-19:30"
+  status     MatchStatus     @default(PLANNED)
+  visibility MatchVisibility @default(PUBLIC)
 
   clubId String
   club   Club   @relation(fields: [clubId], references: [id])

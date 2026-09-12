@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
-import type { CreateMatchRequest, PlayerSummary } from '@/api/types';
+import type { CreateMatchRequest, MatchVisibility, PlayerSummary } from '@/api/types';
 import { Button } from '@/components/button';
 import { Chip } from '@/components/chip';
 import { Court, type CourtPlayer } from '@/components/court';
@@ -18,6 +18,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { errorMessage } from '@/lib/api-error';
 import { addMinutesToTime, dayChipLabel, slotStarts, upcomingDays } from '@/lib/dates';
+import { defaultVisibility, VISIBILITY_HINT, VISIBILITY_LABEL, VISIBILITY_OPTIONS } from '@/lib/visibility';
 import { useClubsQuery, useCreateMatchMutation, useFriendsQuery } from '@/store/api';
 
 const SLOT_MINUTES = 90; // creneau standard de padel
@@ -37,17 +38,27 @@ export default function NewMatchScreen() {
   const [day, setDay] = useState(days[0]!);
   const [start, setStart] = useState<string>();
   const [roles, setRoles] = useState<InviteRoles>({});
+  const [visibility, setVisibility] = useState<MatchVisibility | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
   const starts = slotStarts(day);
   const slot = start && starts.includes(start) ? `${start}-${addMinutesToTime(start, SLOT_MINUTES)}` : undefined;
+  // Tant que l'organisateur n'a rien choisi, le defaut suit sa composition.
+  const chosenVisibility = visibility ?? defaultVisibility(Object.keys(roles).length);
 
   async function submit() {
     if (!clubId || !slot) {
       setFormError('Choisissez un club, un jour et une heure.');
       return;
     }
-    const body: CreateMatchRequest = { clubId, date: day, slot, creatorTeam: 'A', invites: toInvites(roles, 'A') };
+    const body: CreateMatchRequest = {
+      clubId,
+      date: day,
+      slot,
+      creatorTeam: 'A',
+      invites: toInvites(roles, 'A'),
+      visibility: chosenVisibility,
+    };
     // Memes regles que l'API (packages/shared) : creneau, date, 2 joueurs max par equipe.
     const parsed = createMatchSchema.safeParse(body);
     if (!parsed.success) {
@@ -100,6 +111,19 @@ export default function NewMatchScreen() {
           title="Joueurs"
           hint="Invitez 1 partenaire et 2 adversaires parmi vos amis (facultatif, vous pourrez compléter plus tard).">
           <InviteFriendsPicker friends={friends ?? []} roles={roles} onChange={setRoles} capacity={CAPACITY} />
+        </Section>
+
+        <Section title="Qui voit ce match ?" hint={VISIBILITY_HINT[chosenVisibility]}>
+          <View style={styles.wrap}>
+            {VISIBILITY_OPTIONS.map((option) => (
+              <Chip
+                key={option}
+                label={VISIBILITY_LABEL[option]}
+                selected={chosenVisibility === option}
+                onPress={() => setVisibility(option)}
+              />
+            ))}
+          </View>
         </Section>
 
         <Section title="Votre terrain">

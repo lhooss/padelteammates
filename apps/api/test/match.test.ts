@@ -346,6 +346,90 @@ describe('Matchs — annulation et depart', () => {
   });
 });
 
+describe('Matchs — visibilite', () => {
+  async function matchWith(visibility: 'PUBLIC' | 'FRIENDS' | 'PRIVATE') {
+    const clubId = await seedClub();
+    const p = await fourPlayers();
+    const res = await request(app)
+      .post('/api/matches')
+      .set('Authorization', auth(p[0].token))
+      .send({ ...createMatchBody(clubId, p), visibility })
+      .expect(201);
+    return { p, matchId: res.body.id as string };
+  }
+
+  function calendarOf(user: TestUser): Promise<{ id: string }[]> {
+    return request(app)
+      .get(`/api/matches/calendar/weekly?from=${MATCH_DAY}`)
+      .set('Authorization', auth(user.token))
+      .expect(200)
+      .then((res) => res.body);
+  }
+
+  it('public : toute la communaute le voit', async () => {
+    await matchWith('PUBLIC');
+    const stranger = await registerUser(app, { email: 'vis-public@example.com' });
+    expect(await calendarOf(stranger)).toHaveLength(1);
+  });
+
+  it('amis : seuls les amis de l\'organisateur le voient', async () => {
+    const { p } = await matchWith('FRIENDS');
+
+    const stranger = await registerUser(app, { email: 'vis-stranger@example.com' });
+    expect(await calendarOf(stranger)).toHaveLength(0);
+
+    const friend = await registerUser(app, { email: 'vis-friend@example.com' });
+    await makeFriends(app, p[0]!, friend);
+    expect(await calendarOf(friend)).toHaveLength(1);
+  });
+
+  it('prive : seuls les joueurs du match le voient, et il ne revele pas son existence', async () => {
+    const { p, matchId } = await matchWith('PRIVATE');
+
+    const friend = await registerUser(app, { email: 'vis-private-friend@example.com' });
+    await makeFriends(app, p[0]!, friend);
+    expect(await calendarOf(friend)).toHaveLength(0);
+    await request(app).get(`/api/matches/${matchId}`).set('Authorization', auth(friend.token)).expect(404);
+
+    // Un invite voit toujours son propre match.
+    expect(await calendarOf(p[2]!)).toHaveLength(1);
+    await request(app).get(`/api/matches/${matchId}`).set('Authorization', auth(p[2]!.token)).expect(200);
+  });
+
+  it('on ne demande pas a rejoindre un match qu\'on ne voit pas (404)', async () => {
+    const clubId = await seedClub();
+    const p = await fourPlayers();
+    const created = await request(app)
+      .post('/api/matches')
+      .set('Authorization', auth(p[0].token))
+      .send({ clubId, date: MATCH_DAY, slot: '18:00-19:30', creatorTeam: 'A', invites: [], visibility: 'PRIVATE' })
+      .expect(201);
+
+    const stranger = await registerUser(app, { email: 'vis-join@example.com' });
+    await request(app)
+      .post(`/api/matches/${created.body.id}/join-requests`)
+      .set('Authorization', auth(stranger.token))
+      .send({ team: 'B' })
+      .expect(404);
+  });
+
+  it('seul l\'organisateur change la visibilite (403)', async () => {
+    const { p, matchId } = await matchWith('PUBLIC');
+    await request(app)
+      .patch(`/api/matches/${matchId}/visibility`)
+      .set('Authorization', auth(p[1]!.token))
+      .send({ visibility: 'PRIVATE' })
+      .expect(403);
+
+    const res = await request(app)
+      .patch(`/api/matches/${matchId}/visibility`)
+      .set('Authorization', auth(p[0]!.token))
+      .send({ visibility: 'PRIVATE' })
+      .expect(200);
+    expect(res.body.visibility).toBe('PRIVATE');
+  });
+});
+
 describe('Matchs — reservation du terrain', () => {
   async function plannedMatch(): Promise<{ p: TestUser[]; matchId: string }> {
     const clubId = await seedClub();
