@@ -8,7 +8,7 @@ import { Button } from '@/components/button';
 import { Screen } from '@/components/screen';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { FontFamily, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { errorMessage, firstFieldErrors } from '@/lib/api-error';
 import { useRegisterMutation } from '@/store/api';
@@ -41,7 +41,7 @@ export default function RegisterScreen() {
   }
 
   return (
-    <Screen edges={['top', 'bottom']}>
+    <Screen edges={['bottom']}>
       <AuthForm title="Créer un compte" subtitle="Organisez vos matchs et suivez vos statistiques.">
         <TextField
           label="Nom"
@@ -80,7 +80,8 @@ export default function RegisterScreen() {
           <Switch
             value={profilePublic}
             onValueChange={setProfilePublic}
-            trackColor={{ true: theme.primary }}
+            trackColor={{ true: theme.primary, false: theme.border }}
+            thumbColor="#FFFFFF"
             accessibilityLabel="Profil public"
           />
         </View>
@@ -105,8 +106,8 @@ const styles = StyleSheet.create({
   },
   link: {
     textAlign: 'center',
+    fontFamily: FontFamily.bodySemiBold,
     fontSize: 14,
-    fontWeight: 600,
     paddingVertical: 8,
   },
 });

@@ -30,7 +30,8 @@ export default function PlayerScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <Stack.Screen options={{ title: player?.name ?? 'Joueur' }} />
+      {/* Le nom est affiche en grand dans la page : en-tete sans titre. */}
+      <Stack.Screen options={{ title: '' }} />
       {!player ? (
         <QueryState loading={isLoading} error={errorMessage(error)} onRetry={refetch} />
       ) : (

@@ -1,9 +1,21 @@
+import {
+  BigShouldersDisplay_800ExtraBold,
+  BigShouldersDisplay_900Black,
+} from '@expo-google-fonts/big-shoulders-display';
+import {
+  InstrumentSans_400Regular,
+  InstrumentSans_500Medium,
+  InstrumentSans_600SemiBold,
+  InstrumentSans_700Bold,
+} from '@expo-google-fonts/instrument-sans';
+import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { AppState, useColorScheme } from 'react-native';
 import { Provider } from 'react-redux';
 
+import { Colors, FontFamily } from '@/constants/theme';
 import { store } from '@/store';
 import { api } from '@/store/api';
 import { restoreSession } from '@/store/auth-slice';
@@ -12,16 +24,42 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    BigShouldersDisplay_800ExtraBold,
+    BigShouldersDisplay_900Black,
+    InstrumentSans_400Regular,
+    InstrumentSans_500Medium,
+    InstrumentSans_600SemiBold,
+    InstrumentSans_700Bold,
+  });
+
   return (
     <Provider store={store}>
-      <RootNavigator />
+      <RootNavigator fontsLoaded={fontsLoaded} />
     </Provider>
   );
 }
 
+// Theme de navigation (en-tetes, fonds des ecrans) aligne sur l'identite "Court bleu".
+function navigationTheme(scheme: 'light' | 'dark') {
+  const base = scheme === 'dark' ? DarkTheme : DefaultTheme;
+  const c = Colors[scheme];
+  return {
+    ...base,
+    colors: { ...base.colors, primary: c.primary, background: c.background, card: c.background, text: c.text, border: c.border },
+    fonts: {
+      ...base.fonts,
+      regular: { ...base.fonts.regular, fontFamily: FontFamily.body },
+      medium: { ...base.fonts.medium, fontFamily: FontFamily.bodyMedium },
+      bold: { ...base.fonts.bold, fontFamily: FontFamily.bodyBold },
+      heavy: { ...base.fonts.heavy, fontFamily: FontFamily.display },
+    },
+  };
+}
+
 // Connecte -> onglets (+ profils de joueurs, planification) ; sinon -> authentification.
-// Le splash reste affiche tant que le jeton persiste n'a pas ete relu.
-function RootNavigator() {
+// Le splash reste affiche tant que le jeton persiste et les polices ne sont pas prets.
+function RootNavigator({ fontsLoaded }: { fontsLoaded: boolean }) {
   const colorScheme = useColorScheme();
   const dispatch = useAppDispatch();
   const status = useAppSelector((state) => state.auth.status);
@@ -31,8 +69,8 @@ function RootNavigator() {
   }, [dispatch]);
 
   useEffect(() => {
-    if (status !== 'restoring') void SplashScreen.hideAsync();
-  }, [status]);
+    if (status !== 'restoring' && fontsLoaded) void SplashScreen.hideAsync();
+  }, [status, fontsLoaded]);
 
   // Pas encore de notifications push : au retour dans l'app, on rafraichit ce qui a pu
   // changer entre-temps (notifications, invitations et matchs, demandes d'ami).
@@ -44,9 +82,18 @@ function RootNavigator() {
     return () => subscription.remove();
   }, [dispatch, status]);
 
+  // On attend aussi la relecture de la session : sinon les gardes redirigent vers la
+  // connexion puis l'accueil, et un lien direct (ex. /matches) serait perdu.
+  if (!fontsLoaded || status === 'restoring') return null;
+
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false }}>
+    <ThemeProvider value={navigationTheme(colorScheme === 'dark' ? 'dark' : 'light')}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          headerShadowVisible: false,
+          headerTitleStyle: { fontFamily: FontFamily.display, fontSize: 24 },
+        }}>
         <Stack.Protected guard={status === 'signedIn'}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen

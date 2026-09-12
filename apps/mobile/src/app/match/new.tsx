@@ -6,6 +6,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import type { CreateMatchRequest, PlayerSummary } from '@/api/types';
 import { Button } from '@/components/button';
 import { Chip } from '@/components/chip';
+import { Court, type CourtPlayer } from '@/components/court';
 import {
   InviteFriendsPicker,
   toInvites,
@@ -24,8 +25,8 @@ const DAYS_AHEAD = 14;
 // Nouvelle partie : je suis dans l'equipe A avec 1 partenaire, face a 2 adversaires.
 const CAPACITY: Record<InviteRole, number> = { partner: 1, opponent: 2 };
 
-// Planifier un match : club, jour, creneau d'1h30, puis invitation d'amis.
-// Le match peut etre cree incomplet et complete plus tard ("Inviter des joueurs").
+// Planifier un match : club, jour, creneau d'1h30, puis invitation d'amis. Le terrain
+// en bas se compose en direct. Le match peut etre cree incomplet et complete plus tard.
 export default function NewMatchScreen() {
   const { data: clubs } = useClubsQuery();
   const { data: friends } = useFriendsQuery();
@@ -101,12 +102,9 @@ export default function NewMatchScreen() {
           <InviteFriendsPicker friends={friends ?? []} roles={roles} onChange={setRoles} capacity={CAPACITY} />
         </Section>
 
-        <ThemedView type="backgroundElement" style={styles.summary}>
-          <ThemedText type="smallBold">Équipes</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            {summarize(friends ?? [], roles)}
-          </ThemedText>
-        </ThemedView>
+        <Section title="Votre terrain">
+          <Court teams={previewTeams(friends ?? [], roles)} />
+        </Section>
 
         {formError || error ? <ThemedText themeColor="danger">{formError ?? errorMessage(error)}</ThemedText> : null}
         <Button title="Planifier le match" onPress={submit} loading={isLoading} />
@@ -118,7 +116,9 @@ export default function NewMatchScreen() {
 function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
     <View style={styles.section}>
-      <ThemedText type="smallBold">{title}</ThemedText>
+      <ThemedText type="eyebrow" themeColor="textSecondary">
+        {title}
+      </ThemedText>
       {hint ? (
         <ThemedText type="small" themeColor="textSecondary">
           {hint}
@@ -129,13 +129,16 @@ function Section({ title, hint, children }: { title: string; hint?: string; chil
   );
 }
 
-// "Vous + Sara  contre  Mehdi et une place libre"
-function summarize(friends: PlayerSummary[], roles: InviteRoles): string {
-  const names = (role: InviteRole) => friends.filter((f) => roles[f.id] === role).map((f) => f.name);
-  const partner = names('partner')[0] ?? 'une place libre';
-  const opponents = names('opponent');
-  const others = [...opponents, ...Array.from({ length: 2 - opponents.length }, () => 'une place libre')];
-  return `Vous + ${partner}  contre  ${others.join(' et ')}`;
+// Apercu du terrain : moi et mon partenaire en A, les adversaires en B.
+function previewTeams(friends: PlayerSummary[], roles: InviteRoles): Record<'A' | 'B', CourtPlayer[]> {
+  const invited = (role: InviteRole): CourtPlayer[] =>
+    friends
+      .filter((f) => roles[f.id] === role)
+      .map((f) => ({ key: f.id, name: f.name, invited: true }));
+  return {
+    A: [{ key: 'me', name: 'Vous', isMe: true }, ...invited('partner')],
+    B: invited('opponent'),
+  };
 }
 
 const styles = StyleSheet.create({
@@ -157,10 +160,5 @@ const styles = StyleSheet.create({
   },
   row: {
     gap: Spacing.two,
-  },
-  summary: {
-    borderRadius: Spacing.three,
-    padding: Spacing.three,
-    gap: Spacing.one,
   },
 });

@@ -84,7 +84,7 @@ export default function FriendsScreen() {
           sections={sections}
           keyExtractor={(row) => row.player.id}
           renderSectionHeader={({ section }) => (
-            <ThemedText type="smallBold" themeColor="textSecondary" style={styles.sectionTitle}>
+            <ThemedText type="eyebrow" themeColor="textSecondary" style={styles.sectionTitle}>
               {section.title}
             </ThemedText>
           )}

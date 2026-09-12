@@ -2,7 +2,7 @@ import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 
 import { ThemedText } from './themed-text';
 
-import { Spacing } from '@/constants/theme';
+import { FontFamily, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 type TextFieldProps = TextInputProps & {
@@ -15,7 +15,9 @@ export function TextField({ label, error, style, ...rest }: TextFieldProps) {
 
   return (
     <View style={styles.container}>
-      <ThemedText type="smallBold">{label}</ThemedText>
+      <ThemedText type="eyebrow" themeColor="textSecondary">
+        {label}
+      </ThemedText>
       <TextInput
         accessibilityLabel={label}
         placeholderTextColor={theme.textSecondary}
@@ -41,13 +43,14 @@ export function TextField({ label, error, style, ...rest }: TextFieldProps) {
 
 const styles = StyleSheet.create({
   container: {
-    gap: Spacing.one,
+    gap: Spacing.two,
   },
   input: {
-    minHeight: 48,
-    borderWidth: 1,
-    borderRadius: Spacing.three,
+    minHeight: 50,
+    borderWidth: 1.5,
+    borderRadius: Radius.md,
     paddingHorizontal: Spacing.three,
+    fontFamily: FontFamily.body,
     fontSize: 16,
   },
 });

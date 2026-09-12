@@ -1,76 +1,125 @@
-import { StyleSheet, View } from 'react-native';
-
-import { ThemedText } from './themed-text';
-import { ThemedView } from './themed-view';
+import { StyleSheet, Text, View } from 'react-native';
 
 import type { FrmtSummary } from '@/api/types';
-import { Spacing } from '@/constants/theme';
-import { FRMT_CATEGORY_LABEL, formatDate, formatEvolution, formatPoints } from '@/lib/frmt';
+import { FontFamily, Radius, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
+import { FRMT_CATEGORY_LABEL, formatDate, formatPoints } from '@/lib/frmt';
 
-// Classement national FRMT d'un joueur : rang, points, evolution (ou demande en attente).
+// Classement national FRMT d'un joueur, sur fond de gazon : rang en grand, points, evolution.
 export function FrmtCard({ summary }: { summary: FrmtSummary }) {
-  const evolution = formatEvolution(summary.evolution);
+  const theme = useTheme();
+  const evolution = summary.evolution ?? 0;
+  const places = `${Math.abs(evolution)} place${Math.abs(evolution) > 1 ? 's' : ''}`;
+  const details = [
+    `${summary.fullName}${summary.birthYear ? ` (${summary.birthYear})` : ''}`,
+    summary.club,
+    summary.importedAt ? `mis à jour le ${formatDate(summary.importedAt)}` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
-    <ThemedView type="backgroundElement" style={styles.card}>
+    <View style={[styles.card, { backgroundColor: theme.court }]}>
       <View style={styles.header}>
-        <ThemedText type="small" themeColor="textSecondary" style={styles.flex}>
-          Classement FRMT · {FRMT_CATEGORY_LABEL[summary.category]}
-        </ThemedText>
+        <Text style={styles.eyebrow}>Classement FRMT · {FRMT_CATEGORY_LABEL[summary.category]}</Text>
         {summary.status === 'PENDING' ? (
-          <ThemedText type="small" themeColor="warning">
-            À valider
-          </ThemedText>
+          <View style={[styles.pending, { backgroundColor: theme.ball }]}>
+            <Text style={[styles.pendingText, { color: theme.onBall }]}>À valider</Text>
+          </View>
         ) : null}
       </View>
 
       {summary.rank !== null && summary.points !== null ? (
         <View style={styles.rankRow}>
-          <ThemedText type="subtitle">{summary.rank}e</ThemedText>
-          <View style={styles.flex}>
-            <ThemedText type="smallBold">{formatPoints(summary.points)}</ThemedText>
-            <ThemedText type="small" themeColor={evolution.startsWith('-') ? 'danger' : 'textSecondary'}>
-              {evolution === '=' ? 'Inchangé' : `${evolution} place${Math.abs(summary.evolution ?? 0) > 1 ? 's' : ''}`}
-            </ThemedText>
+          <Text style={styles.rank}>
+            {summary.rank}
+            <Text style={styles.rankSuffix}>e</Text>
+          </Text>
+          <View style={styles.rankDetails}>
+            <Text style={styles.points}>{formatPoints(summary.points)}</Text>
+            <Text style={[styles.evolution, { color: evolution > 0 ? theme.ball : evolution < 0 ? '#FFB4AE' : 'rgba(255,255,255,0.7)' }]}>
+              {evolution > 0 ? `▲ ${places}` : evolution < 0 ? `▼ ${places}` : 'Inchangé'}
+            </Text>
           </View>
         </View>
       ) : (
-        <ThemedText type="small" themeColor="textSecondary">
-          Absent du dernier classement importé.
-        </ThemedText>
+        <Text style={styles.absent}>Absent du dernier classement importé.</Text>
       )}
 
-      <ThemedText type="small" themeColor="textSecondary">
-        {summary.fullName}
-        {summary.birthYear ? ` (${summary.birthYear})` : ''}
-        {summary.club ? ` · ${summary.club}` : ''}
-        {summary.importedAt ? ` · mis à jour le ${formatDate(summary.importedAt)}` : ''}
-      </ThemedText>
+      <Text style={styles.details}>{details}</Text>
       {summary.status === 'PENDING' ? (
-        <ThemedText type="small" themeColor="textSecondary">
+        <Text style={styles.details}>
           En attente de validation par l'administrateur : il sera ensuite visible sur votre profil.
-        </ThemedText>
+        </Text>
       ) : null}
-    </ThemedView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: Spacing.three,
+    borderRadius: Radius.lg,
     padding: Spacing.three,
     gap: Spacing.two,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: Spacing.two,
+  },
+  eyebrow: {
+    flex: 1,
+    fontFamily: FontFamily.bodyBold,
+    fontSize: 11,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+    color: 'rgba(255, 255, 255, 0.75)',
+  },
+  pending: {
+    borderRadius: Radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  pendingText: {
+    fontFamily: FontFamily.bodyBold,
+    fontSize: 11,
   },
   rankRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     gap: Spacing.three,
   },
-  flex: {
-    flex: 1,
+  rank: {
+    fontFamily: FontFamily.displayBlack,
+    fontSize: 72,
+    lineHeight: 72,
+    color: '#FFFFFF',
+  },
+  rankSuffix: {
+    fontSize: 32,
+  },
+  rankDetails: {
+    paddingBottom: Spacing.two,
+    gap: Spacing.half,
+  },
+  points: {
+    fontFamily: FontFamily.bodyBold,
+    fontSize: 17,
+    color: '#FFFFFF',
+  },
+  evolution: {
+    fontFamily: FontFamily.bodySemiBold,
+    fontSize: 13,
+  },
+  absent: {
+    fontFamily: FontFamily.bodySemiBold,
+    fontSize: 15,
+    color: '#FFFFFF',
+  },
+  details: {
+    fontFamily: FontFamily.bodyMedium,
+    fontSize: 13,
+    lineHeight: 18,
+    color: 'rgba(255, 255, 255, 0.75)',
   },
 });

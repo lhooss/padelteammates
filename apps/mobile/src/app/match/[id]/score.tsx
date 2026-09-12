@@ -8,7 +8,7 @@ import { Button } from '@/components/button';
 import { QueryState } from '@/components/query-state';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { FontFamily, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { errorMessage } from '@/lib/api-error';
 import { useMatchQuery, useMeQuery, useSubmitScoreMutation } from '@/store/api';
@@ -253,7 +253,9 @@ function GamesInput({ value, label, onChange }: { value: string; label: string; 
 function Section({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
   return (
     <View style={styles.section}>
-      <ThemedText type="smallBold">{title}</ThemedText>
+      <ThemedText type="eyebrow" themeColor="textSecondary">
+        {title}
+      </ThemedText>
       {hint ? (
         <ThemedText type="small" themeColor="textSecondary">
           {hint}
@@ -338,8 +340,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: Spacing.two,
     textAlign: 'center',
-    fontSize: 18,
-    fontWeight: 600,
+    fontFamily: FontFamily.display,
+    fontSize: 24,
   },
   summary: {
     borderRadius: Spacing.three,

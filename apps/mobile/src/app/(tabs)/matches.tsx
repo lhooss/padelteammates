@@ -72,7 +72,7 @@ export default function MyMatchesScreen() {
         keyExtractor={(match) => match.id}
         ListHeaderComponent={header}
         renderSectionHeader={({ section }) => (
-          <ThemedText type="smallBold" themeColor="textSecondary" style={styles.sectionTitle}>
+          <ThemedText type="eyebrow" themeColor="textSecondary" style={styles.sectionTitle}>
             {section.title}
           </ThemedText>
         )}

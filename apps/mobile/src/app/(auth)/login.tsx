@@ -8,6 +8,7 @@ import { Button } from '@/components/button';
 import { Screen } from '@/components/screen';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
+import { FontFamily } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { errorMessage, firstFieldErrors } from '@/lib/api-error';
 import { useLoginMutation } from '@/store/api';
@@ -39,8 +40,8 @@ export default function LoginScreen() {
   }
 
   return (
-    <Screen edges={['top', 'bottom']}>
-      <AuthForm title="Connexion" subtitle="Retrouvez vos matchs de padel à Kénitra.">
+    <Screen edges={['bottom']}>
+      <AuthForm title="Connexion" subtitle="Retrouvez vos matchs, vos amis et votre classement.">
         <TextField
           label="Email"
           value={email}
@@ -74,8 +75,8 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   link: {
     textAlign: 'center',
+    fontFamily: FontFamily.bodySemiBold,
     fontSize: 14,
-    fontWeight: 600,
     paddingVertical: 8,
   },
 });

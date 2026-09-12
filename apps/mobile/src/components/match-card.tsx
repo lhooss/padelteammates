@@ -1,23 +1,19 @@
-import { router } from 'expo-router';
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
+import { Court, type CourtPlayer } from './court';
 import { ScoreSummary } from './score-summary';
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
 
-import type { Match, MatchStatus, Participant } from '@/api/types';
-import { Spacing, type ThemeColor } from '@/constants/theme';
+import type { Match, MatchStatus, Team } from '@/api/types';
+import { FontFamily, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { formatDay } from '@/lib/dates';
 import { teamInScore } from '@/lib/matches';
 
-const STATUS: Record<MatchStatus, { label: string; color: ThemeColor }> = {
-  PLANNED: { label: 'Planifié', color: 'primary' },
-  PENDING: { label: 'Score à valider', color: 'warning' },
-  COMPLETED: { label: 'Terminé', color: 'textSecondary' },
-};
-
+// Carte de match : heure et club, puis le terrain vu du dessus avec les joueurs
+// dans leurs carres de service (places libres en pointilles), puis le score s'il existe.
 export function MatchCard({
   match,
   meId,
@@ -32,38 +28,44 @@ export function MatchCard({
   children?: ReactNode;
 }) {
   const theme = useTheme();
-  const status = STATUS[match.status];
-  const when = showDate ? `${formatDay(match.date)} · ${match.slot}` : match.slot;
+  const [start, end] = match.slot.split('-');
+  const when = [showDate ? capitalize(formatDay(match.date)) : null, highlight ? 'Vous jouez' : null]
+    .filter(Boolean)
+    .join(' · ');
+  const team = (t: Team): CourtPlayer[] =>
+    match.participants
+      .filter((p) => p.team === t)
+      .map((p) => ({
+        key: p.id,
+        name: p.user.name,
+        userId: p.userId,
+        isMe: p.userId === meId,
+        invited: p.presenceStatus === 'INVITED',
+      }));
 
   return (
-    <ThemedView
-      type="backgroundElement"
-      style={[styles.card, highlight && { borderColor: theme.primary, borderWidth: 1.5 }]}>
+    <ThemedView type="backgroundElement" style={[styles.card, { borderColor: theme.border }]}>
       <View style={styles.header}>
-        <View style={styles.headerText}>
-          <ThemedText type="smallBold">{match.club.name}</ThemedText>
+        <View>
+          <Text style={[styles.start, { color: theme.text }]}>{start}</Text>
           <ThemedText type="small" themeColor="textSecondary">
-            {when}
-            {highlight ? ' · Vous jouez' : ''}
+            → {end}
           </ThemedText>
         </View>
-        <ThemedText type="small" themeColor={status.color}>
-          {status.label}
-        </ThemedText>
+        <View style={styles.headerText}>
+          <ThemedText type="smallBold" numberOfLines={1}>
+            {match.club.name}
+          </ThemedText>
+          {when ? (
+            <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+              {when}
+            </ThemedText>
+          ) : null}
+        </View>
+        <StatusPill status={match.status} />
       </View>
 
-      <View style={styles.teams}>
-        <TeamColumn label="Équipe A" players={match.participants.filter((p) => p.team === 'A')} meId={meId} />
-        <ThemedText type="smallBold" themeColor="textSecondary">
-          vs
-        </ThemedText>
-        <TeamColumn
-          label="Équipe B"
-          players={match.participants.filter((p) => p.team === 'B')}
-          meId={meId}
-          alignEnd
-        />
-      </View>
+      <Court teams={{ A: team('A'), B: team('B') }} />
 
       {match.score ? (
         <ScoreSummary score={match.score} myTeam={meId ? teamInScore(match.score, meId) : undefined} />
@@ -74,87 +76,54 @@ export function MatchCard({
   );
 }
 
-function TeamColumn({
-  label,
-  players,
-  meId,
-  alignEnd = false,
-}: {
-  label: string;
-  players: Participant[];
-  meId?: string;
-  alignEnd?: boolean;
-}) {
+function StatusPill({ status }: { status: MatchStatus }) {
+  const theme = useTheme();
+  const look = {
+    PLANNED: { label: 'Planifié', backgroundColor: theme.backgroundSelected, color: theme.primary },
+    PENDING: { label: 'Score à valider', backgroundColor: theme.ball, color: theme.onBall },
+    COMPLETED: { label: 'Terminé', backgroundColor: theme.background, color: theme.textSecondary },
+  }[status];
+
   return (
-    <View style={[styles.team, alignEnd && styles.alignEnd]}>
-      <ThemedText type="small" themeColor="textSecondary">
-        {label}
-      </ThemedText>
-      {players.length === 0 ? (
-        <ThemedText type="small" themeColor="textSecondary">
-          À compléter
-        </ThemedText>
-      ) : (
-        players.map((p) => <PlayerName key={p.id} participant={p} meId={meId} />)
-      )}
+    <View style={[styles.pill, { backgroundColor: look.backgroundColor }]}>
+      <Text style={[styles.pillText, { color: look.color }]}>{look.label}</Text>
     </View>
   );
 }
 
-// Nom d'un joueur : ouvre son profil (sauf pour soi-meme).
-function PlayerName({ participant, meId }: { participant: Participant; meId?: string }) {
-  const color = participant.presenceStatus === 'CONFIRMED' ? 'text' : 'textSecondary';
-  const suffix = participant.presenceStatus === 'INVITED' ? ' (invité)' : '';
-
-  if (participant.userId === meId) {
-    return (
-      <ThemedText type="small" themeColor={color}>
-        Vous{suffix}
-      </ThemedText>
-    );
-  }
-  return (
-    <Pressable
-      accessibilityRole="link"
-      hitSlop={6}
-      onPress={() => router.push({ pathname: '/players/[id]', params: { id: participant.userId } })}>
-      <ThemedText type="small" themeColor={color} style={styles.link}>
-        {participant.user.name}
-        {suffix}
-      </ThemedText>
-    </Pressable>
-  );
+function capitalize(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: Spacing.three,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
     padding: Spacing.three,
     gap: Spacing.three,
-    borderWidth: 1.5,
-    borderColor: 'transparent',
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: Spacing.two,
-  },
-  headerText: {
-    flex: 1,
-  },
-  teams: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
   },
-  team: {
+  start: {
+    fontFamily: FontFamily.display,
+    fontSize: 30,
+    lineHeight: 30,
+  },
+  headerText: {
     flex: 1,
-    gap: Spacing.half,
   },
-  alignEnd: {
-    alignItems: 'flex-end',
+  pill: {
+    borderRadius: Radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    alignSelf: 'flex-start',
   },
-  link: {
-    textDecorationLine: 'underline',
+  pillText: {
+    fontFamily: FontFamily.bodyBold,
+    fontSize: 11,
+    letterSpacing: 0.4,
   },
 });

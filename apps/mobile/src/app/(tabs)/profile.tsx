@@ -9,7 +9,7 @@ import { Screen } from '@/components/screen';
 import { StatTiles } from '@/components/stat-tiles';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { BottomTabInset, Spacing } from '@/constants/theme';
+import { BottomTabInset, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { errorMessage } from '@/lib/api-error';
 import { formatPhone, padelProfileRows } from '@/lib/profile';
@@ -50,7 +50,7 @@ export default function ProfileScreen() {
         <StatTiles wins={me.wins} losses={me.losses} />
 
         <View style={styles.section}>
-          <ThemedText type="smallBold">Classement national FRMT</ThemedText>
+          <SectionTitle>Classement national FRMT</SectionTitle>
           {me.frmt ? (
             <>
               <FrmtCard summary={me.frmt} />
@@ -71,21 +71,21 @@ export default function ProfileScreen() {
               </View>
             </>
           ) : (
-            <>
+            <ThemedView type="backgroundElement" style={styles.card}>
               <ThemedText type="small" themeColor="textSecondary">
                 Licencié à la FRMT ? Retrouvez-vous dans le classement national padel pour l'afficher sur votre
                 profil.
               </ThemedText>
               <Button title="Relier mon classement FRMT" variant="secondary" onPress={() => router.push('/account/frmt')} />
-            </>
+            </ThemedView>
           )}
         </View>
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <ThemedText type="smallBold" style={styles.flex}>
-              Profil padel
-            </ThemedText>
+            <View style={styles.flex}>
+              <SectionTitle>Profil padel</SectionTitle>
+            </View>
             <Button
               title="Modifier"
               variant="secondary"
@@ -101,7 +101,7 @@ export default function ProfileScreen() {
           />
         </View>
 
-        <ThemedView type="backgroundElement" style={styles.row}>
+        <ThemedView type="backgroundElement" style={[styles.card, styles.row]}>
           <View style={styles.flex}>
             <ThemedText type="smallBold">Profil public</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
@@ -115,18 +115,29 @@ export default function ProfileScreen() {
             onValueChange={(value) => {
               void updateMe({ profilePublic: value });
             }}
-            trackColor={{ true: theme.primary }}
+            trackColor={{ true: theme.primary, false: theme.border }}
+            thumbColor="#FFFFFF"
             accessibilityLabel="Profil public"
           />
         </ThemedView>
 
-        {me.role === 'ADMIN' ? (
-          <Button title="Administration FRMT" variant="secondary" onPress={() => router.push('/admin/frmt')} />
-        ) : null}
-        <Button title="Email et mot de passe" variant="secondary" onPress={() => router.push('/account/security')} />
-        <Button title="Se déconnecter" variant="danger" onPress={() => dispatch(signedOut())} />
+        <View style={styles.section}>
+          {me.role === 'ADMIN' ? (
+            <Button title="Administration FRMT" variant="secondary" onPress={() => router.push('/admin/frmt')} />
+          ) : null}
+          <Button title="Email et mot de passe" variant="secondary" onPress={() => router.push('/account/security')} />
+          <Button title="Se déconnecter" variant="danger" onPress={() => dispatch(signedOut())} />
+        </View>
       </ScrollView>
     </Screen>
+  );
+}
+
+function SectionTitle({ children }: { children: string }) {
+  return (
+    <ThemedText type="eyebrow" themeColor="textSecondary">
+      {children}
+    </ThemedText>
   );
 }
 
@@ -147,12 +158,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: Spacing.two,
   },
+  card: {
+    borderRadius: Radius.lg,
+    padding: Spacing.three,
+    gap: Spacing.three,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.three,
-    borderRadius: Spacing.three,
-    padding: Spacing.three,
   },
   flex: {
     flex: 1,

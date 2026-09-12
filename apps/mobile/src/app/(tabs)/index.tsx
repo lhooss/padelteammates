@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, SectionList, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, SectionList, StyleSheet, Text, View } from 'react-native';
 
 import type { Match } from '@/api/types';
 import { Button } from '@/components/button';
@@ -11,7 +11,8 @@ import { NotificationBell } from '@/components/notification-bell';
 import { QueryState } from '@/components/query-state';
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
-import { BottomTabInset, Spacing } from '@/constants/theme';
+import { BottomTabInset, FontFamily, Radius, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { errorMessage } from '@/lib/api-error';
 import { addDays, formatDay, formatWeek, mondayOf, toIsoDay } from '@/lib/dates';
 import { isParticipant } from '@/lib/matches';
@@ -20,6 +21,7 @@ import { useClubsQuery, useMeQuery, useWeeklyCalendarQuery } from '@/store/api';
 // Calendrier global de la communaute, semaine par semaine (lundi -> dimanche), filtrable
 // par club. On peut y demander a rejoindre un match qui a des places libres.
 export default function CalendarScreen() {
+  const theme = useTheme();
   const [monday, setMonday] = useState(() => mondayOf(new Date()));
   const [clubId, setClubId] = useState<string | undefined>(undefined);
   const { data, isLoading, isFetching, error, refetch } = useWeeklyCalendarQuery({ from: toIsoDay(monday), clubId });
@@ -36,21 +38,9 @@ export default function CalendarScreen() {
         <NotificationBell />
       </View>
       <View style={styles.weekSwitcher}>
-        <Button
-          title="‹"
-          variant="secondary"
-          onPress={() => setMonday(addDays(monday, -7))}
-          accessibilityLabel="Semaine précédente"
-        />
-        <ThemedText type="smallBold" style={styles.weekLabel}>
-          {formatWeek(monday)}
-        </ThemedText>
-        <Button
-          title="›"
-          variant="secondary"
-          onPress={() => setMonday(addDays(monday, 7))}
-          accessibilityLabel="Semaine suivante"
-        />
+        <WeekArrow label="‹" hint="Semaine précédente" onPress={() => setMonday(addDays(monday, -7))} />
+        <Text style={[styles.weekLabel, { color: theme.text }]}>{formatWeek(monday)}</Text>
+        <WeekArrow label="›" hint="Semaine suivante" onPress={() => setMonday(addDays(monday, 7))} />
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.clubs}>
         <Chip label="Tous les clubs" selected={!clubId} onPress={() => setClubId(undefined)} />
@@ -77,7 +67,7 @@ export default function CalendarScreen() {
         keyExtractor={(match) => match.id}
         ListHeaderComponent={header}
         renderSectionHeader={({ section }) => (
-          <ThemedText type="smallBold" themeColor="textSecondary" style={styles.dayTitle}>
+          <ThemedText type="eyebrow" themeColor="textSecondary" style={styles.dayTitle}>
             {section.title}
           </ThemedText>
         )}
@@ -98,6 +88,23 @@ export default function CalendarScreen() {
         contentContainerStyle={styles.list}
       />
     </Screen>
+  );
+}
+
+function WeekArrow({ label, hint, onPress }: { label: string; hint: string; onPress: () => void }) {
+  const theme = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={hint}
+      hitSlop={6}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.arrow,
+        { backgroundColor: theme.backgroundElement, borderColor: theme.border, opacity: pressed ? 0.7 : 1 },
+      ]}>
+      <Text style={[styles.arrowText, { color: theme.primary }]}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -131,7 +138,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   planButton: {
-    minHeight: 40,
+    minHeight: 44,
     paddingHorizontal: Spacing.three,
   },
   weekSwitcher: {
@@ -142,17 +149,33 @@ const styles = StyleSheet.create({
   weekLabel: {
     flex: 1,
     textAlign: 'center',
+    fontFamily: FontFamily.display,
+    fontSize: 22,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  arrow: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.pill,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  arrowText: {
+    fontFamily: FontFamily.display,
+    fontSize: 24,
+    lineHeight: 26,
   },
   clubs: {
     gap: Spacing.two,
   },
   dayTitle: {
-    marginTop: Spacing.three,
+    marginTop: Spacing.four,
     marginBottom: Spacing.two,
-    textTransform: 'capitalize',
   },
   separator: {
-    height: Spacing.two,
+    height: Spacing.three,
   },
   empty: {
     textAlign: 'center',

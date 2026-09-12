@@ -56,6 +56,7 @@ npm run mobile    # serveur Expo : scanner le QR code avec Expo Go (SDK 57)
   - **Planifier un match** : club, jour, créneau d'1h30, invitation d'amis (1 partenaire, 2 adversaires).
   - **Profil** : mes stats, profil padel (niveau, côté, main, club habituel, téléphone visible par mes amis), profil public ; **Modifier le profil** et **Email et mot de passe** (mot de passe actuel requis) ; déconnexion. Connexion / inscription.
   - Le **profil d'un joueur** affiche son profil padel, et pour ses amis son téléphone avec un bouton WhatsApp.
+- **Design « Court bleu »** (`src/constants/theme.ts`) : bleu gazon `#1F4FA0`, jaune balle `#DAF03C` pour l'action principale et « vous », encre `#0D1A33`, vitre `#EDF2F8` ; mode sombre « nuit » (`#081226`). Titres et chiffres en **Big Shoulders Display**, texte en **Instrument Sans** (`@expo-google-fonts`, une `fontFamily` par graisse car Android ignore `fontWeight` sur une police personnalisée). Chaque match est dessiné comme un **terrain vu du dessus** (`components/court.tsx` : équipes A / B, places libres en pointillés, « Vous » en jaune balle), le score comme un tableau de retransmission et le classement FRMT sur une carte gazon. Icône et splash assortis dans `assets/images/`.
 - Navigation `expo-router` (`src/app/`), état Redux Toolkit + RTK Query (`src/store/`), jeton JWT dans le trousseau du téléphone (`expo-secure-store`).
 - Documentation Expo de la version utilisée : https://docs.expo.dev/versions/v57.0.0/
 

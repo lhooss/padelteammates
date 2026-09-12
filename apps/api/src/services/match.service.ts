@@ -1,6 +1,7 @@
 import type { MatchStatus } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../utils/errors.js';
+import { formatMatchDay } from '../utils/format.js';
 import { slotEnd } from '../utils/slot.js';
 import { friendIds } from './friendship.service.js';
 import { notify, notifyMany } from './notification.service.js';
@@ -40,7 +41,7 @@ function weekBounds(ref: Date): { start: Date; end: Date } {
 }
 
 function inviteMessage(day: Date, slot: string, clubName: string): string {
-  return `Vous etes invite a un match le ${day.toISOString().slice(0, 10)} (${slot}) au club ${clubName}.`;
+  return `Vous êtes invité à un match le ${formatMatchDay(day)} (${slot}) au club ${clubName}.`;
 }
 
 // Les invites doivent etre des joueurs inscrits et des amis de l'organisateur.
@@ -188,7 +189,7 @@ export async function invitePlayers(userId: string, matchId: string, input: AddI
 export async function respondToInvite(userId: string, matchId: string, accept: boolean) {
   const participant = await prisma.participant.findUnique({
     where: { userId_matchId: { userId, matchId } },
-    include: { match: true },
+    include: { match: true, user: { select: { name: true } } },
   });
   if (!participant) throw new NotFoundError('Invitation introuvable');
   if (participant.match.status !== 'PLANNED') {
@@ -198,6 +199,7 @@ export async function respondToInvite(userId: string, matchId: string, accept: b
     return prisma.match.findUniqueOrThrow({ where: { id: matchId }, include: MATCH_INCLUDE });
   }
 
+  const ofMatch = `au match du ${formatMatchDay(participant.match.date)}`;
   if (accept) {
     await prisma.participant.update({
       where: { userId_matchId: { userId, matchId } },
@@ -206,7 +208,7 @@ export async function respondToInvite(userId: string, matchId: string, accept: b
     await notify({
       userId: participant.match.createdById,
       type: 'INVITE',
-      message: 'Un joueur a confirme sa participation.',
+      message: `${participant.user.name} a confirmé sa participation ${ofMatch}.`,
       matchId,
     });
   } else {
@@ -215,7 +217,7 @@ export async function respondToInvite(userId: string, matchId: string, accept: b
     await notify({
       userId: participant.match.createdById,
       type: 'INVITE',
-      message: 'Un joueur a decline l\'invitation.',
+      message: `${participant.user.name} a décliné votre invitation ${ofMatch}.`,
       matchId,
     });
   }

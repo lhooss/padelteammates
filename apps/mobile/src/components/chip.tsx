@@ -1,8 +1,6 @@
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
 
-import { ThemedText } from './themed-text';
-
-import { Spacing } from '@/constants/theme';
+import { FontFamily, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 // Pastille selectionnable (filtres, choix de club / jour / creneau).
@@ -33,18 +31,20 @@ export function Chip({
           opacity: disabled ? 0.4 : pressed ? 0.8 : 1,
         },
       ]}>
-      <ThemedText type="small" style={{ color: selected ? theme.onPrimary : theme.text }}>
-        {label}
-      </ThemedText>
+      <Text style={[styles.label, { color: selected ? theme.onPrimary : theme.text }]}>{label}</Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   chip: {
-    paddingVertical: Spacing.one + Spacing.half,
-    paddingHorizontal: Spacing.three,
-    borderRadius: 999,
-    borderWidth: 1,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: Radius.pill,
+    borderWidth: 1.5,
+  },
+  label: {
+    fontFamily: FontFamily.bodySemiBold,
+    fontSize: 13,
   },
 });

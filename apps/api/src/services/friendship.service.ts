@@ -68,7 +68,7 @@ export async function sendFriendRequest(userId: string, targetId: string): Promi
   await prisma.$transaction(async (tx) => {
     await tx.friendship.create({ data: { requesterId: userId, addresseeId: targetId } });
     await notify(
-      { userId: targetId, type: 'FRIEND_REQUEST', message: `${requester.name} vous a envoye une demande d'ami.` },
+      { userId: targetId, type: 'FRIEND_REQUEST', message: `${requester.name} vous a envoyé une demande d'ami.` },
       tx,
     );
   });
@@ -88,7 +88,7 @@ export async function acceptFriendRequest(userId: string, requesterId: string): 
   await prisma.$transaction(async (tx) => {
     await tx.friendship.update({ where: { id: pending.id }, data: { status: 'ACCEPTED' } });
     await notify(
-      { userId: requesterId, type: 'FRIEND_ACCEPTED', message: `${me.name} a accepte votre demande d'ami.` },
+      { userId: requesterId, type: 'FRIEND_ACCEPTED', message: `${me.name} a accepté votre demande d'ami.` },
       tx,
     );
   });

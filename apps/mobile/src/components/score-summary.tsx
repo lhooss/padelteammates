@@ -1,42 +1,74 @@
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { ThemedText } from './themed-text';
-import { ThemedView } from './themed-view';
 
 import type { Score, Team } from '@/api/types';
-import { Spacing } from '@/constants/theme';
+import { FontFamily, Radius, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 
-// Detail d'un score saisi : sets de chaque partie (equipe A – equipe B) et vainqueur.
+// Score facon tableau de retransmission : une ligne par equipe, un chiffre par set.
+// La balle jaune marque l'equipe gagnante.
 export function ScoreSummary({ score, myTeam }: { score: Score; myTeam?: Team }) {
+  const theme = useTheme();
   const { games } = score.setsDetail;
+  const winner = score.winningTeam;
   const outcome =
-    score.winningTeam === null
+    winner === null
       ? 'Égalité'
       : myTeam
-        ? score.winningTeam === myTeam
+        ? winner === myTeam
           ? 'Victoire de votre équipe'
-          : 'Victoire de l\'équipe adverse'
-        : `Victoire de l'équipe ${score.winningTeam}`;
+          : "Victoire de l'équipe adverse"
+        : `Victoire de l'équipe ${winner}`;
 
   return (
-    <ThemedView type="backgroundSelected" style={styles.box}>
-      {games.map((game, i) => (
-        <View key={i} style={styles.row}>
-          <ThemedText type="small" themeColor="textSecondary" style={styles.label}>
-            {games.length > 1 ? `Partie ${i + 1}` : 'Sets (A – B)'}
-          </ThemedText>
-          <ThemedText type="smallBold">{game.sets.map((s) => `${s.a}-${s.b}`).join('   ')}</ThemedText>
+    <View style={[styles.board, { borderColor: theme.border }]}>
+      {games.map((game, gi) => (
+        <View key={gi} style={styles.game}>
+          {games.length > 1 ? (
+            <ThemedText type="eyebrow" themeColor="textSecondary">
+              Partie {gi + 1}
+            </ThemedText>
+          ) : null}
+          {(['A', 'B'] as const).map((team) => (
+            <View key={team} style={styles.row}>
+              <View
+                style={[
+                  styles.ball,
+                  winner === team ? { backgroundColor: theme.ball, borderColor: theme.ball } : { borderColor: theme.border },
+                ]}
+              />
+              <ThemedText type={myTeam === team ? 'smallBold' : 'small'} style={styles.team}>
+                Équipe {team}
+                {myTeam === team ? ' · vous' : ''}
+              </ThemedText>
+              {game.sets.map((set, si) => {
+                const games = team === 'A' ? set.a : set.b;
+                const wonSet = team === 'A' ? set.a > set.b : set.b > set.a;
+                return (
+                  <Text key={si} style={[styles.set, { color: wonSet ? theme.text : theme.textSecondary }]}>
+                    {games}
+                  </Text>
+                );
+              })}
+            </View>
+          ))}
         </View>
       ))}
-      <ThemedText type="small">{outcome}</ThemedText>
-    </ThemedView>
+      <ThemedText type="eyebrow" themeColor={winner && winner === myTeam ? 'primary' : 'textSecondary'}>
+        {outcome}
+      </ThemedText>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  box: {
-    borderRadius: Spacing.two,
-    padding: Spacing.two,
+  board: {
+    borderTopWidth: 1,
+    paddingTop: Spacing.three,
+    gap: Spacing.two,
+  },
+  game: {
     gap: Spacing.one,
   },
   row: {
@@ -44,7 +76,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
   },
-  label: {
-    minWidth: 88,
+  ball: {
+    width: 10,
+    height: 10,
+    borderRadius: Radius.pill,
+    borderWidth: 1.5,
+  },
+  team: {
+    flex: 1,
+  },
+  set: {
+    width: 26,
+    textAlign: 'center',
+    fontFamily: FontFamily.display,
+    fontSize: 24,
+    lineHeight: 26,
   },
 });

@@ -149,7 +149,9 @@ function EditProfileForm({ me }: { me: User }) {
 function Choices({ title, children }: { title: string; children: ReactNode }) {
   return (
     <View style={styles.section}>
-      <ThemedText type="smallBold">{title}</ThemedText>
+      <ThemedText type="eyebrow" themeColor="textSecondary">
+        {title}
+      </ThemedText>
       <View style={styles.wrap}>{children}</View>
     </View>
   );

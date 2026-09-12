@@ -1,6 +1,7 @@
 import type { Prisma, Team } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../utils/errors.js';
+import { formatMatchDay } from '../utils/format.js';
 import { slotEnd } from '../utils/slot.js';
 import { applyStats } from './stats.service.js';
 import { notifyMany } from './notification.service.js';
@@ -90,7 +91,7 @@ export async function submitScore(userId: string, matchId: string, input: Submit
         others,
         {
           type: 'SCORE_ENTERED',
-          message: 'Un resultat a ete saisi. Merci de le valider ou de le corriger.',
+          message: `Résultat saisi pour votre match du ${formatMatchDay(match.date)} : validez-le ou corrigez-le.`,
           matchId,
         },
         tx,
@@ -151,7 +152,7 @@ export async function validateScore(userId: string, matchId: string) {
           match.participants.map((p) => p.userId),
           {
             type: 'MATCH_COMPLETED',
-            message: 'Le resultat est valide et verrouille. Les statistiques ont ete mises a jour.',
+            message: `Résultat validé pour votre match du ${formatMatchDay(match.date)} : vos statistiques sont à jour.`,
             matchId,
           },
           tx,

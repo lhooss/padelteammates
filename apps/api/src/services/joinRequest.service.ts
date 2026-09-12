@@ -1,6 +1,7 @@
 import type { Team } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 import { ConflictError, ForbiddenError, NotFoundError } from '../utils/errors.js';
+import { formatMatchDay } from '../utils/format.js';
 import { assertNoSlotClash, assertOpenForNewPlayers, getMatch } from './match.service.js';
 import { notify } from './notification.service.js';
 
@@ -20,8 +21,9 @@ function assertTeamHasRoom(participants: { team: Team }[], team: Team): void {
   }
 }
 
+// "du lundi 14 septembre (20:00-21:30)"
 function describeMatch(match: { date: Date; slot: string }): string {
-  return `du ${match.date.toISOString().slice(0, 10)} (${match.slot})`;
+  return `du ${formatMatchDay(match.date)} (${match.slot})`;
 }
 
 export async function requestToJoin(userId: string, matchId: string, team: Team) {
@@ -41,7 +43,7 @@ export async function requestToJoin(userId: string, matchId: string, team: Team)
         {
           userId: match.createdById,
           type: 'JOIN_REQUEST',
-          message: `${requester.name} demande a rejoindre votre match ${describeMatch(match)}.`,
+          message: `${requester.name} demande à rejoindre l'équipe ${team} de votre match ${describeMatch(match)}.`,
           matchId,
         },
         tx,
@@ -80,7 +82,7 @@ export async function acceptJoinRequest(organizerId: string, matchId: string, re
       {
         userId: requesterId,
         type: 'JOIN_ACCEPTED',
-        message: `Votre demande pour le match ${describeMatch(match)} a ete acceptee.`,
+        message: `Vous jouez ! Votre demande pour le match ${describeMatch(match)} a été acceptée.`,
         matchId,
       },
       tx,
@@ -109,7 +111,7 @@ export async function removeJoinRequest(userId: string, matchId: string, request
         {
           userId: requesterId,
           type: 'JOIN_DECLINED',
-          message: `Votre demande pour le match ${describeMatch(match)} n'a pas ete retenue.`,
+          message: `Votre demande pour le match ${describeMatch(match)} n'a pas été retenue.`,
           matchId,
         },
         tx,

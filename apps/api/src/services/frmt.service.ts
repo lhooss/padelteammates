@@ -108,7 +108,7 @@ export async function linkMyRanking(userId: string, input: FrmtLinkInput) {
     admins.map((a) => a.id),
     {
       type: 'FRMT_LINK_REQUEST',
-      message: `${me.name} demande a relier son profil au classement FRMT (${entry.fullName}, ${entry.rank}e).`,
+      message: `${me.name} demande à relier son profil au classement FRMT (${entry.fullName}, ${entry.rank}e).`,
     },
   );
   return frmtSummaryFor(userId, { includePending: true });
@@ -147,7 +147,7 @@ export async function verifyLink(linkId: string) {
   await notify({
     userId: link.userId,
     type: 'FRMT_LINK_VERIFIED',
-    message: 'Votre classement FRMT est valide et affiche sur votre profil.',
+    message: 'Votre classement FRMT est validé : il est affiché sur votre profil.',
   });
   return frmtSummaryFor(link.userId, { includePending: true });
 }
@@ -159,7 +159,7 @@ export async function rejectLink(linkId: string): Promise<void> {
   await notify({
     userId: link.userId,
     type: 'FRMT_LINK_REJECTED',
-    message: 'Votre demande de lien avec le classement FRMT n\'a pas ete validee.',
+    message: "Votre demande de lien avec le classement FRMT n'a pas été validée.",
   });
 }
 
