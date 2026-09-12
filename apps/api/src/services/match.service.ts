@@ -260,14 +260,81 @@ export function weeklyCalendar(viewerId: string, ref: Date, clubId?: string) {
   });
 }
 
-export async function cancelMatch(userId: string, matchId: string) {
-  const match = await prisma.match.findUnique({ where: { id: matchId } });
+// Annulation par l'organisateur : le match disparait pour tout le monde (participants
+// et demandes pour rejoindre suivent). Possible tant qu'aucun resultat n'est saisi.
+export async function cancelMatch(userId: string, matchId: string): Promise<void> {
+  const match = await prisma.match.findUnique({
+    where: { id: matchId },
+    include: { participants: true, joinRequests: true, club: true },
+  });
   if (!match) throw new NotFoundError('Match introuvable');
   if (match.createdById !== userId) {
-    throw new ForbiddenError('Seul le createur peut annuler le match');
+    throw new ForbiddenError('Seul l\'organisateur peut annuler le match');
   }
-  if (match.status === 'COMPLETED') {
-    throw new BadRequestError('Un match termine ne peut pas etre annule');
+  if (match.status !== 'PLANNED') {
+    throw new BadRequestError('Un match dont le resultat est saisi ne peut plus etre annule');
   }
-  await prisma.match.delete({ where: { id: matchId } });
+
+  // Tous ceux qui comptaient sur ce match : joueurs et joueurs en attente d'une place.
+  const toWarn = [...match.participants.map((p) => p.userId), ...match.joinRequests.map((r) => r.userId)].filter(
+    (id) => id !== userId,
+  );
+
+  await prisma.$transaction(async (tx) => {
+    // Sans matchId : le match n'existera plus, la notification n'ouvre donc rien.
+    await notifyMany(
+      toWarn,
+      {
+        type: 'MATCH_CANCELLED',
+        message: `Le match du ${formatMatchDay(match.date)} (${match.slot}) au club ${match.club.name} est annulé.`,
+      },
+      tx,
+    );
+    await tx.match.delete({ where: { id: matchId } });
+  });
+}
+
+// Depart d'un joueur : il quitte de lui-meme, ou l'organisateur le retire. Sa place
+// redevient libre. L'organisateur, lui, annule son match au lieu de le quitter.
+export async function leaveMatch(userId: string, matchId: string, targetId: string) {
+  const match = await prisma.match.findUnique({
+    where: { id: matchId },
+    include: { participants: true, club: true },
+  });
+  if (!match) throw new NotFoundError('Match introuvable');
+
+  const isOrganizer = match.createdById === userId;
+  if (!isOrganizer && userId !== targetId) {
+    throw new ForbiddenError('Seul l\'organisateur peut retirer un autre joueur');
+  }
+  if (targetId === match.createdById) {
+    throw new BadRequestError('L\'organisateur ne quitte pas son match : il l\'annule');
+  }
+  if (match.status !== 'PLANNED' || Date.now() >= slotEnd(match.date, match.slot).getTime()) {
+    throw new BadRequestError('La composition de ce match ne peut plus changer');
+  }
+  if (!match.participants.some((p) => p.userId === targetId)) {
+    throw new NotFoundError('Ce joueur ne participe pas au match');
+  }
+
+  const target = await prisma.user.findUniqueOrThrow({ where: { id: targetId }, select: { name: true } });
+  const ofMatch = `du ${formatMatchDay(match.date)} (${match.slot}) au club ${match.club.name}`;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.participant.delete({ where: { userId_matchId: { userId: targetId, matchId } } });
+    const warning = isOrganizer
+      ? {
+          userId: targetId,
+          type: 'PLAYER_REMOVED' as const,
+          message: `L'organisateur vous a retiré du match ${ofMatch}.`,
+        }
+      : {
+          userId: match.createdById,
+          type: 'PLAYER_LEFT' as const,
+          message: `${target.name} a quitté votre match ${ofMatch} : sa place est de nouveau libre.`,
+        };
+    await notify({ ...warning, matchId }, tx);
+  });
+
+  return getMatch(matchId);
 }

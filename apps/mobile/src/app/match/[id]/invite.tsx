@@ -3,7 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
-import type { Team } from '@/api/types';
+import type { Participant, Team } from '@/api/types';
 import { Button } from '@/components/button';
 import { InviteFriendsPicker, toInvites, type InviteRoles } from '@/components/invite-friends-picker';
 import { MatchCard } from '@/components/match-card';
@@ -12,16 +12,25 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { errorMessage } from '@/lib/api-error';
+import { confirmAction } from '@/lib/confirm';
 import { freeSpots } from '@/lib/matches';
-import { useFriendsQuery, useInvitePlayersMutation, useMatchQuery, useMeQuery } from '@/store/api';
+import {
+  useFriendsQuery,
+  useInvitePlayersMutation,
+  useLeaveMatchMutation,
+  useMatchQuery,
+  useMeQuery,
+} from '@/store/api';
 
-// Ajouter des amis a un match deja cree, dans les places libres (organisateur uniquement).
-export default function InvitePlayersScreen() {
+// Composition d'un match deja cree (organisateur) : retirer un joueur, completer
+// les places libres avec des amis.
+export default function MatchPlayersScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: me } = useMeQuery();
   const { data: match, isLoading, error, refetch } = useMatchQuery(id);
   const { data: friends } = useFriendsQuery();
   const [invitePlayers, { isLoading: sending, error: sendError }] = useInvitePlayersMutation();
+  const [removePlayer, { isLoading: removing, error: removeError }] = useLeaveMatchMutation();
   const [roles, setRoles] = useState<InviteRoles>({});
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -37,6 +46,7 @@ export default function InvitePlayersScreen() {
   const spots = freeSpots(match);
   const capacity = { partner: spots[organizerTeam], opponent: spots[organizerTeam === 'A' ? 'B' : 'A'] };
   const available = (friends ?? []).filter((f) => !match.participants.some((p) => p.userId === f.id));
+  const others = match.participants.filter((p) => p.userId !== match.createdById);
   const matchId = match.id;
 
   async function submit() {
@@ -55,10 +65,43 @@ export default function InvitePlayersScreen() {
     }
   }
 
+  async function remove(player: Participant) {
+    const confirmed = await confirmAction({
+      title: 'Retirer ce joueur ?',
+      message: `${player.user.name} est retiré du match et sa place redevient libre. Le joueur en est prévenu.`,
+      confirmLabel: 'Retirer',
+    });
+    if (confirmed) await removePlayer({ matchId, userId: player.userId });
+  }
+
   return (
     <ThemedView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <MatchCard match={match} meId={me.id} />
+
+        {others.length > 0 ? (
+          <View style={styles.section}>
+            <ThemedText type="smallBold">Joueurs du match</ThemedText>
+            {others.map((player) => (
+              <View key={player.id} style={styles.playerRow}>
+                <View style={styles.flex}>
+                  <ThemedText numberOfLines={1}>{player.user.name}</ThemedText>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    Équipe {player.team}
+                    {player.presenceStatus === 'INVITED' ? ' · invité' : ''}
+                  </ThemedText>
+                </View>
+                <Button
+                  title="Retirer"
+                  variant="danger"
+                  style={styles.compact}
+                  disabled={removing}
+                  onPress={() => remove(player)}
+                />
+              </View>
+            ))}
+          </View>
+        ) : null}
 
         {capacity.partner + capacity.opponent === 0 ? (
           <ThemedText themeColor="textSecondary">Le match est complet.</ThemedText>
@@ -72,8 +115,10 @@ export default function InvitePlayersScreen() {
           </View>
         )}
 
-        {formError || sendError ? (
-          <ThemedText themeColor="danger">{formError ?? errorMessage(sendError)}</ThemedText>
+        {formError || sendError || removeError ? (
+          <ThemedText themeColor="danger">
+            {formError ?? errorMessage(sendError) ?? errorMessage(removeError)}
+          </ThemedText>
         ) : null}
         <Button
           title="Envoyer les invitations"
@@ -106,5 +151,17 @@ const styles = StyleSheet.create({
   },
   section: {
     gap: Spacing.two,
+  },
+  playerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  flex: {
+    flex: 1,
+  },
+  compact: {
+    minHeight: 36,
+    paddingHorizontal: Spacing.three,
   },
 });

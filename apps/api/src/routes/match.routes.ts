@@ -101,6 +101,17 @@ matchRouter.delete(
   }),
 );
 
+// --- Composition ---
+
+// Quitter le match, ou (organisateur) en retirer un joueur.
+matchRouter.delete(
+  '/:id/participants/:userId',
+  asyncHandler(async (req, res) => {
+    res.json(await matchService.leaveMatch(req.auth!.userId, req.params.id!, req.params.userId!));
+  }),
+);
+
+// Annulation du match par l'organisateur : il disparait pour tout le monde.
 matchRouter.delete(
   '/:id',
   asyncHandler(async (req, res) => {

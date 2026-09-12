@@ -168,6 +168,20 @@ Authorization: Bearer {{token1}}
 GET {{baseUrl}}/api/users/{{user3}}/stats
 Authorization: Bearer {{token1}}
 
+### --- COMPOSITION (sur un match encore planifie, creneau a venir) ---
+
+### 17. Le joueur 3 quitte le match : sa place redevient libre
+DELETE {{baseUrl}}/api/matches/{{matchId}}/participants/{{user3}}
+Authorization: Bearer {{token3}}
+
+### 18. L'organisateur retire le joueur 4 (qui est notifie)
+DELETE {{baseUrl}}/api/matches/{{matchId}}/participants/{{user4}}
+Authorization: Bearer {{token1}}
+
+### 19. L'organisateur annule le match (204) : il disparait, les joueurs sont notifies
+DELETE {{baseUrl}}/api/matches/{{matchId}}
+Authorization: Bearer {{token1}}
+
 ### 17. Classement (profils publics)
 GET {{baseUrl}}/api/users/leaderboard
 Authorization: Bearer {{token1}}

@@ -18,10 +18,34 @@ export function freeSpots(match: Match): Record<Team, number> {
   return { A: 2 - taken('A'), B: 2 - taken('B') };
 }
 
+export function hasFreeSpot(match: Match): boolean {
+  const spots = freeSpots(match);
+  return spots.A + spots.B > 0;
+}
+
 // L'organisateur peut encore inviter : match planifie avec au moins une place libre.
 export function canInvitePlayers(match: Match, meId: string): boolean {
-  const spots = freeSpots(match);
-  return match.createdById === meId && match.status === 'PLANNED' && spots.A + spots.B > 0;
+  return match.createdById === meId && match.status === 'PLANNED' && hasFreeSpot(match);
+}
+
+// L'organisateur compose son equipe (inviter, retirer) tant que le creneau est a venir.
+export function canManagePlayers(match: Match, meId: string): boolean {
+  return match.createdById === meId && match.status === 'PLANNED' && !hasSlotEnded(match);
+}
+
+// L'organisateur annule son match tant qu'aucun resultat n'est saisi.
+export function canCancelMatch(match: Match, meId: string): boolean {
+  return match.createdById === meId && match.status === 'PLANNED';
+}
+
+// Les autres joueurs quittent le match tant que le creneau est a venir.
+export function canLeaveMatch(match: Match, meId: string): boolean {
+  return (
+    isParticipant(match, meId) &&
+    match.createdById !== meId &&
+    match.status === 'PLANNED' &&
+    !hasSlotEnded(match)
+  );
 }
 
 // Fin du creneau. Les joueurs sont a Kenitra : l'heure locale du telephone suffit

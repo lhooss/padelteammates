@@ -233,3 +233,98 @@ describe('Matchs — inviter des joueurs apres la creation', () => {
     await invite(p[0]!, matchId, [{ userId: p[2]!.id, team: 'B' }]).expect(400);
   });
 });
+
+describe('Matchs — annulation et depart', () => {
+  async function plannedMatch(): Promise<{ p: TestUser[]; matchId: string }> {
+    const clubId = await seedClub();
+    const p = await fourPlayers();
+    const res = await request(app)
+      .post('/api/matches')
+      .set('Authorization', auth(p[0].token))
+      .send(createMatchBody(clubId, p))
+      .expect(201);
+    return { p, matchId: res.body.id as string };
+  }
+
+  function leave(user: TestUser, matchId: string, targetId: string) {
+    return request(app)
+      .delete(`/api/matches/${matchId}/participants/${targetId}`)
+      .set('Authorization', auth(user.token));
+  }
+
+  function cancel(user: TestUser, matchId: string) {
+    return request(app).delete(`/api/matches/${matchId}`).set('Authorization', auth(user.token));
+  }
+
+  function notificationsOf(user: TestUser, type: string) {
+    return request(app)
+      .get('/api/notifications')
+      .set('Authorization', auth(user.token))
+      .expect(200)
+      .then((res) => res.body.filter((n: { type: string }) => n.type === type));
+  }
+
+  it('l\'organisateur annule son match : il disparait et les joueurs sont prevenus', async () => {
+    const { p, matchId } = await plannedMatch();
+    await cancel(p[0]!, matchId).expect(204);
+    await request(app).get(`/api/matches/${matchId}`).set('Authorization', auth(p[0]!.token)).expect(404);
+    expect(await notificationsOf(p[1]!, 'MATCH_CANCELLED')).toHaveLength(1);
+  });
+
+  it('seul l\'organisateur annule (403)', async () => {
+    const { p, matchId } = await plannedMatch();
+    await cancel(p[1]!, matchId).expect(403);
+  });
+
+  it('un joueur quitte le match : sa place redevient libre, l\'organisateur est prevenu', async () => {
+    const { p, matchId } = await plannedMatch();
+    const res = await leave(p[2]!, matchId, p[2]!.id).expect(200);
+    expect(res.body.participants).toHaveLength(3);
+    expect(res.body.participants.some((x: { userId: string }) => x.userId === p[2]!.id)).toBe(false);
+    expect(await notificationsOf(p[0]!, 'PLAYER_LEFT')).toHaveLength(1);
+  });
+
+  it('l\'organisateur retire un joueur, qui est prevenu', async () => {
+    const { p, matchId } = await plannedMatch();
+    await leave(p[0]!, matchId, p[3]!.id).expect(200);
+    expect(await notificationsOf(p[3]!, 'PLAYER_REMOVED')).toHaveLength(1);
+  });
+
+  it('un joueur ne peut pas en retirer un autre (403)', async () => {
+    const { p, matchId } = await plannedMatch();
+    await leave(p[1]!, matchId, p[2]!.id).expect(403);
+  });
+
+  it('l\'organisateur ne quitte pas son match : il l\'annule (400)', async () => {
+    const { p, matchId } = await plannedMatch();
+    await leave(p[0]!, matchId, p[0]!.id).expect(400);
+  });
+
+  it('refuse un depart une fois le creneau passe (400)', async () => {
+    const { p, matchId } = await plannedMatch();
+    await moveMatchToPast(matchId);
+    await leave(p[2]!, matchId, p[2]!.id).expect(400);
+  });
+
+  it('refuse d\'annuler une fois le resultat saisi (400)', async () => {
+    const { p, matchId } = await plannedMatch();
+    for (const player of p.slice(1)) {
+      await request(app)
+        .post(`/api/matches/${matchId}/respond`)
+        .set('Authorization', auth(player.token))
+        .send({ accept: true })
+        .expect(200);
+    }
+    await moveMatchToPast(matchId);
+    await request(app)
+      .post(`/api/matches/${matchId}/score`)
+      .set('Authorization', auth(p[0]!.token))
+      .send({
+        teams: { A: [p[0]!.id, p[1]!.id], B: [p[2]!.id, p[3]!.id] },
+        games: [{ sets: [{ a: 6, b: 4 }, { a: 6, b: 3 }] }],
+      })
+      .expect(201);
+
+    await cancel(p[0]!, matchId).expect(400);
+  });
+});

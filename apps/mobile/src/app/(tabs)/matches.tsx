@@ -5,6 +5,7 @@ import type { Match } from '@/api/types';
 import { Button } from '@/components/button';
 import { JoinMatchActions } from '@/components/join-match-actions';
 import { JoinRequestsList } from '@/components/join-requests-list';
+import { MatchActions } from '@/components/match-actions';
 import { MatchCard } from '@/components/match-card';
 import { NotificationBell } from '@/components/notification-bell';
 import { QueryState } from '@/components/query-state';
@@ -13,7 +14,7 @@ import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { BottomTabInset, Spacing } from '@/constants/theme';
 import { errorMessage } from '@/lib/api-error';
-import { canInvitePlayers, hasSlotEnded, isParticipant, isPendingInvitation, needsMyAction } from '@/lib/matches';
+import { canManagePlayers, hasFreeSpot, isParticipant, isPendingInvitation, needsMyAction } from '@/lib/matches';
 import { useMeQuery, useMyMatchesQuery, useRespondInviteMutation } from '@/store/api';
 
 // Mes matchs : invitations, actions a traiter (scores, demandes pour rejoindre),
@@ -98,13 +99,14 @@ export default function MyMatchesScreen() {
             <ScoreActions match={item} meId={me.id} />
             <JoinRequestsList match={item} meId={me.id} />
             <JoinMatchActions match={item} meId={me.id} />
-            {canInvitePlayers(item, me.id) && !hasSlotEnded(item) ? (
+            {canManagePlayers(item, me.id) ? (
               <Button
-                title="Inviter des joueurs"
+                title={hasFreeSpot(item) ? 'Inviter des joueurs' : 'Gérer les joueurs'}
                 variant="secondary"
                 onPress={() => router.push({ pathname: '/match/[id]/invite', params: { id: item.id } })}
               />
             ) : null}
+            <MatchActions match={item} meId={me.id} />
           </MatchCard>
         )}
         ItemSeparatorComponent={() => <View style={styles.separator} />}

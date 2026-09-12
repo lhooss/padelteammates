@@ -132,6 +132,17 @@ export const api = createApi({
       invalidatesTags: ['Match'],
     }),
 
+    // Annulation par l'organisateur : le match disparait pour tout le monde.
+    cancelMatch: build.mutation<void, string>({
+      query: (matchId) => ({ url: `/matches/${matchId}`, method: 'DELETE' }),
+      invalidatesTags: ['Match'],
+    }),
+    // Quitter un match, ou (organisateur) en retirer un joueur.
+    leaveMatch: build.mutation<Match, { matchId: string; userId: string }>({
+      query: ({ matchId, userId }) => ({ url: `/matches/${matchId}/participants/${userId}`, method: 'DELETE' }),
+      invalidatesTags: ['Match'],
+    }),
+
     // Demandes pour rejoindre : demander une place, accepter (organisateur),
     // refuser (organisateur) ou annuler (demandeur).
     requestToJoin: build.mutation<JoinRequest, { matchId: string; team: Team }>({
@@ -252,6 +263,8 @@ export const {
   useCreateMatchMutation,
   useInvitePlayersMutation,
   useRespondInviteMutation,
+  useCancelMatchMutation,
+  useLeaveMatchMutation,
   useRequestToJoinMutation,
   useAcceptJoinRequestMutation,
   useRemoveJoinRequestMutation,

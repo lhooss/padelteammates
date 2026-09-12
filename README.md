@@ -50,6 +50,8 @@ npm run mobile    # serveur Expo : scanner le QR code avec Expo Go (SDK 57)
   - **Notifications** (cloche 🔔 avec le nombre de non-lues, en haut du calendrier, de mes matchs et des amis) : invitations, demandes d'ami, demandes pour rejoindre, scores à valider, classement FRMT ; toucher une notification la marque comme lue et ouvre l'écran concerné. Sans push pour l'instant : vérification chaque minute et au retour dans l'app.
   - **Calendrier** de la semaine de la communauté, filtrable par club ; mes matchs sont mis en avant ; « Rejoindre l'équipe A / B » sur les matchs qui ont des places libres.
   - **Mes matchs** : invitations à accepter ou refuser, scores à saisir ou valider et demandes pour rejoindre à traiter (badge sur l'onglet), mes demandes envoyées, à venir, terminés avec leur score.
+  - **Annuler ou quitter un match** : l'organisateur annule le sien tant qu'aucun score n'est saisi (le match disparaît pour tout le monde, joueurs et demandeurs prévenus) ; les autres joueurs le quittent tant que le créneau n'est pas passé, leur place redevient libre.
+  - **Joueurs du match** (organisateur, bouton « Inviter des joueurs » / « Gérer les joueurs ») : retirer un joueur, ou compléter les places libres avec des amis.
   - **Score du match** (à l'issue du créneau) : composition finale 2 contre 2, sets de chaque partie, résultat calculé en direct (même calcul que l'API, `computeResult` de `packages/shared`) ; l'équipe adverse valide ou corrige.
   - **Amis** : recherche de joueurs par nom, demandes reçues / envoyées (badge), liste d'amis.
   - **Profil d'un joueur** (en touchant son nom) : relation d'amitié, stats si visibles.

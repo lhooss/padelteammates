@@ -110,7 +110,7 @@ function RootNavigator({ fontsLoaded }: { fontsLoaded: boolean }) {
           />
           <Stack.Screen
             name="match/[id]/invite"
-            options={{ headerShown: true, title: 'Inviter des joueurs', presentation: 'modal' }}
+            options={{ headerShown: true, title: 'Joueurs du match', presentation: 'modal' }}
           />
           <Stack.Screen
             name="match/[id]/score"
