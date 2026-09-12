@@ -12,7 +12,7 @@ const KENITRA_CLUBS = [
 ];
 
 async function main() {
-  const email = (process.env.ADMIN_EMAIL ?? 'admin@padel-kenitra.ma').toLowerCase();
+  const email = (process.env.ADMIN_EMAIL ?? 'admin@padelteammates.ma').toLowerCase();
   const password = process.env.ADMIN_PASSWORD ?? 'ChangeMe123!';
   const name = process.env.ADMIN_NAME ?? 'Admin Kenitra';
 
