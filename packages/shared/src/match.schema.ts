@@ -74,6 +74,11 @@ export const joinRequestSchema = z.object({
   team: teamSchema,
 });
 
+// Reservation du terrain au club, confirmee (true) ou retiree (false) par un joueur du match.
+export const courtBookingSchema = z.object({
+  booked: z.boolean(),
+});
+
 // Filtre du calendrier hebdomadaire: date de reference (defaut = semaine courante).
 export const weeklyCalendarSchema = z.object({
   from: z.coerce.date().optional(),
@@ -83,4 +88,5 @@ export const weeklyCalendarSchema = z.object({
 export type CreateMatchInput = z.infer<typeof createMatchSchema>;
 export type RespondInviteInput = z.infer<typeof respondInviteSchema>;
 export type AddInvitesInput = z.infer<typeof addInvitesSchema>;
+export type CourtBookingInput = z.infer<typeof courtBookingSchema>;
 export type WeeklyCalendarInput = z.infer<typeof weeklyCalendarSchema>;

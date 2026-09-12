@@ -99,6 +99,25 @@ export const api = createApi({
       query: () => '/clubs',
       providesTags: ['Club'],
     }),
+    // Administration : la liste inclut les clubs desactives.
+    allClubs: build.query<Club[], void>({
+      query: () => ({ url: '/clubs', params: { includeInactive: 'true' } }),
+      providesTags: ['Club'],
+    }),
+    createClub: build.mutation<Club, { name: string; city?: string }>({
+      query: (body) => ({ url: '/clubs', method: 'POST', body }),
+      invalidatesTags: ['Club'],
+    }),
+    // Renommer, deplacer, desactiver ou reactiver un club.
+    updateClub: build.mutation<Club, { id: string; name?: string; city?: string; active?: boolean }>({
+      query: ({ id, ...body }) => ({ url: `/clubs/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['Club'],
+    }),
+    // Refuse par l'API (409) des que le club a des matchs : on le desactive alors.
+    deleteClub: build.mutation<void, string>({
+      query: (id) => ({ url: `/clubs/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['Club'],
+    }),
 
     weeklyCalendar: build.query<Match[], { from: string; clubId?: string }>({
       query: ({ from, clubId }) => ({
@@ -132,6 +151,11 @@ export const api = createApi({
       invalidatesTags: ['Match'],
     }),
 
+    // Reservation du terrain au club, confirmee par n'importe quel joueur du match.
+    setCourtBooking: build.mutation<Match, { matchId: string; booked: boolean }>({
+      query: ({ matchId, booked }) => ({ url: `/matches/${matchId}/booking`, method: 'POST', body: { booked } }),
+      invalidatesTags: ['Match'],
+    }),
     // Annulation par l'organisateur : le match disparait pour tout le monde.
     cancelMatch: build.mutation<void, string>({
       query: (matchId) => ({ url: `/matches/${matchId}`, method: 'DELETE' }),
@@ -257,12 +281,17 @@ export const {
   useChangeEmailMutation,
   useChangePasswordMutation,
   useClubsQuery,
+  useAllClubsQuery,
+  useCreateClubMutation,
+  useUpdateClubMutation,
+  useDeleteClubMutation,
   useWeeklyCalendarQuery,
   useMyMatchesQuery,
   useMatchQuery,
   useCreateMatchMutation,
   useInvitePlayersMutation,
   useRespondInviteMutation,
+  useSetCourtBookingMutation,
   useCancelMatchMutation,
   useLeaveMatchMutation,
   useRequestToJoinMutation,

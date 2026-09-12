@@ -13,7 +13,9 @@ clubRouter.get(
   requireAuth,
   asyncHandler(async (req, res) => {
     const city = typeof req.query.city === 'string' ? req.query.city : undefined;
-    res.json(await clubService.listClubs(city));
+    // Les clubs desactives ne sont visibles que de l'administrateur.
+    const includeInactive = req.query.includeInactive === 'true' && req.auth!.role === 'ADMIN';
+    res.json(await clubService.listClubs(city, includeInactive));
   }),
 );
 

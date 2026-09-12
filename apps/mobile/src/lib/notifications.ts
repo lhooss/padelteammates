@@ -8,6 +8,7 @@ const LABEL: Record<NotificationType, string> = {
   SCORE_VALIDATED: 'Score',
   MATCH_COMPLETED: 'Match terminé',
   MATCH_CANCELLED: 'Match annulé',
+  COURT_BOOKED: 'Terrain',
   PLAYER_LEFT: 'Départ d\'un joueur',
   PLAYER_REMOVED: 'Retiré du match',
   FRIEND_REQUEST: "Demande d'ami",

@@ -128,6 +128,7 @@ function RootNavigator({ fontsLoaded }: { fontsLoaded: boolean }) {
             name="account/frmt"
             options={{ headerShown: true, title: 'Classement FRMT', presentation: 'modal' }}
           />
+          <Stack.Screen name="admin/clubs" options={{ headerShown: true, title: 'Clubs' }} />
           <Stack.Screen name="admin/frmt" options={{ headerShown: true, title: 'Administration FRMT' }} />
         </Stack.Protected>
         <Stack.Protected guard={status !== 'signedIn'}>

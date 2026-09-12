@@ -4,6 +4,7 @@ import { Alert, SectionList, StyleSheet, View } from 'react-native';
 import type { Match } from '@/api/types';
 import { Button } from '@/components/button';
 import { JoinMatchActions } from '@/components/join-match-actions';
+import { CourtBooking } from '@/components/court-booking';
 import { JoinRequestsList } from '@/components/join-requests-list';
 import { MatchActions } from '@/components/match-actions';
 import { MatchCard } from '@/components/match-card';
@@ -96,6 +97,7 @@ export default function MyMatchesScreen() {
                 />
               </View>
             ) : null}
+            <CourtBooking match={item} meId={me.id} />
             <ScoreActions match={item} meId={me.id} />
             <JoinRequestsList match={item} meId={me.id} />
             <JoinMatchActions match={item} meId={me.id} />

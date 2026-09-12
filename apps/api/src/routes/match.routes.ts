@@ -4,6 +4,7 @@ import { getValidated, validate } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/auth.js';
 import {
   addInvitesSchema,
+  courtBookingSchema,
   createMatchSchema,
   joinRequestSchema,
   respondInviteSchema,
@@ -98,6 +99,15 @@ matchRouter.delete(
   asyncHandler(async (req, res) => {
     await joinRequestService.removeJoinRequest(req.auth!.userId, req.params.id!, req.params.userId!);
     res.status(204).send();
+  }),
+);
+
+// Reservation du terrain au club : n'importe quel joueur du match la confirme ou la retire.
+matchRouter.post(
+  '/:id/booking',
+  validate(courtBookingSchema),
+  asyncHandler(async (req, res) => {
+    res.json(await matchService.setCourtBooking(req.auth!.userId, req.params.id!, req.body.booked));
   }),
 );
 

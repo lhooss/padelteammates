@@ -61,6 +61,11 @@ export function MatchCard({
               {when}
             </ThemedText>
           ) : null}
+          {match.status === 'PLANNED' ? (
+            <ThemedText type="small" themeColor={match.courtBookedAt ? 'text' : 'textSecondary'} numberOfLines={1}>
+              {match.courtBookedAt ? 'Terrain réservé' : 'Terrain à réserver'}
+            </ThemedText>
+          ) : null}
         </View>
         <StatusPill status={match.status} />
       </View>

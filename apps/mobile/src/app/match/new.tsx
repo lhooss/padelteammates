@@ -59,7 +59,7 @@ export default function NewMatchScreen() {
       await createMatch(body).unwrap();
       router.back();
     } catch {
-      // Affichee via `error` (ex. creneau deja reserve dans ce club).
+      // Affichee via `error` (ex. un joueur est deja pris sur ce creneau).
     }
   }
 

@@ -92,49 +92,84 @@ export async function createMatch(creatorId: string, input: CreateMatchInput) {
   // Le club doit exister.
   const club = await prisma.club.findUnique({ where: { id: input.clubId } });
   if (!club) throw new NotFoundError('Club introuvable');
+  if (!club.active) throw new BadRequestError('Ce club n\'accueille plus de matchs');
 
   await assertCanInvite(creatorId, inviteeIds);
   await assertNoSlotClash([creatorId, ...inviteeIds], day, input.slot);
 
-  try {
-    const match = await prisma.$transaction(async (tx) => {
-      const created = await tx.match.create({
-        data: {
-          clubId: input.clubId,
-          date: day,
-          slot: input.slot,
-          createdById: creatorId,
-          participants: {
-            create: [
-              { userId: creatorId, team: input.creatorTeam, presenceStatus: 'CONFIRMED' },
-              ...input.invites.map((i) => ({
-                userId: i.userId,
-                team: i.team,
-                presenceStatus: 'INVITED' as const,
-              })),
-            ],
-          },
+  return prisma.$transaction(async (tx) => {
+    const created = await tx.match.create({
+      data: {
+        clubId: input.clubId,
+        date: day,
+        slot: input.slot,
+        createdById: creatorId,
+        participants: {
+          create: [
+            { userId: creatorId, team: input.creatorTeam, presenceStatus: 'CONFIRMED' },
+            ...input.invites.map((i) => ({
+              userId: i.userId,
+              team: i.team,
+              presenceStatus: 'INVITED' as const,
+            })),
+          ],
         },
-        include: MATCH_INCLUDE,
-      });
-
-      await notifyMany(
-        inviteeIds,
-        { type: 'INVITE', message: inviteMessage(day, input.slot, club.name), matchId: created.id },
-        tx,
-      );
-
-      return created;
+      },
+      include: MATCH_INCLUDE,
     });
 
-    return match;
-  } catch (err) {
-    // Conflit sur la contrainte @@unique([clubId, date, slot]).
-    if (err instanceof Error && 'code' in err && (err as { code?: string }).code === 'P2002') {
-      throw new ConflictError('Ce creneau est deja reserve dans ce club');
-    }
-    throw err;
+    await notifyMany(
+      inviteeIds,
+      { type: 'INVITE', message: inviteMessage(day, input.slot, club.name), matchId: created.id },
+      tx,
+    );
+
+    return created;
+  });
+}
+
+// Reservation du terrain : elle se fait aupres du club, hors de l'app. N'importe quel
+// joueur du match la confirme ici (ou la retire si le terrain est finalement perdu).
+export async function setCourtBooking(userId: string, matchId: string, booked: boolean) {
+  const match = await prisma.match.findUnique({
+    where: { id: matchId },
+    include: { participants: true, club: true },
+  });
+  if (!match) throw new NotFoundError('Match introuvable');
+  if (!match.participants.some((p) => p.userId === userId)) {
+    throw new ForbiddenError('Seuls les joueurs du match peuvent confirmer la reservation');
   }
+  if (match.status !== 'PLANNED') {
+    throw new BadRequestError('Ce match n\'attend plus de reservation de terrain');
+  }
+  // Deja dans l'etat demande : rien a faire, et surtout aucune notification inutile.
+  if (Boolean(match.courtBookedAt) === booked) return getMatch(matchId);
+
+  const me = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true } });
+  const ofMatch = `du ${formatMatchDay(match.date)} (${match.slot}) au club ${match.club.name}`;
+  const others = match.participants.filter((p) => p.userId !== userId).map((p) => p.userId);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.match.update({
+      where: { id: matchId },
+      data: booked
+        ? { courtBookedAt: new Date(), courtBookedById: userId }
+        : { courtBookedAt: null, courtBookedById: null },
+    });
+    await notifyMany(
+      others,
+      {
+        type: 'COURT_BOOKED',
+        message: booked
+          ? `${me.name} a réservé le terrain pour votre match ${ofMatch}.`
+          : `${me.name} a retiré la réservation du terrain pour votre match ${ofMatch} : il reste à réserver.`,
+        matchId,
+      },
+      tx,
+    );
+  });
+
+  return getMatch(matchId);
 }
 
 // Ajoute des amis a un match deja cree, dans les places libres. Reserve a l'organisateur,

@@ -7,6 +7,7 @@ type NotificationType =
   | 'SCORE_VALIDATED'
   | 'MATCH_COMPLETED'
   | 'MATCH_CANCELLED'
+  | 'COURT_BOOKED'
   | 'PLAYER_LEFT'
   | 'PLAYER_REMOVED'
   | 'FRIEND_REQUEST'

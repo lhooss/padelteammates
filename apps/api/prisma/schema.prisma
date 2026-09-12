@@ -92,6 +92,9 @@ model Club {
   id   String @id @default(cuid())
   name String
   city String @default("Kénitra")
+  // Un club ferme est desactive, jamais supprime : les matchs deja joues le gardent.
+  // Un club inactif n'est plus propose (calendrier, planification, club habituel).
+  active Boolean @default(true)
 
   matches Match[]
   members User[]  @relation("HomeClub") // joueurs dont c'est le club habituel
@@ -138,12 +141,16 @@ model Match {
   score        Score?
   joinRequests JoinRequest[]
 
+  // Reservation du terrain, faite aupres du club (hors de l'app) et confirmee ici
+  // par n'importe quel joueur du match. null = terrain pas encore reserve.
+  courtBookedAt   DateTime?
+  courtBookedById String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Empeche les conflits de creneau: un club ne peut avoir 2 matchs
-  // sur le meme jour + creneau.
-  @@unique([clubId, date, slot])
+  // Pas de contrainte d'unicite sur (club, jour, creneau) : un club a plusieurs
+  // terrains, plusieurs matchs peuvent donc partager le meme creneau.
   @@index([date])
 }
 

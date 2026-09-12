@@ -48,6 +48,7 @@ export interface Club {
   id: string;
   name: string;
   city: string;
+  active: boolean; // un club desactive n'est plus propose, son historique reste
 }
 
 export interface Participant {
@@ -144,6 +145,8 @@ export interface Match {
   status: MatchStatus;
   clubId: string;
   createdById: string;
+  courtBookedAt: string | null; // null : terrain pas encore reserve au club
+  courtBookedById: string | null; // le joueur du match qui a confirme
   club: Club;
   participants: Participant[];
   score?: Score | null; // absent du calendrier
@@ -187,6 +190,7 @@ export type NotificationType =
   | 'SCORE_VALIDATED'
   | 'MATCH_COMPLETED'
   | 'MATCH_CANCELLED'
+  | 'COURT_BOOKED'
   | 'PLAYER_LEFT'
   | 'PLAYER_REMOVED'
   | 'FRIEND_REQUEST'

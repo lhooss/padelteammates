@@ -2,7 +2,7 @@
 ### Prerequis: docker compose up -d && npm run prisma:migrate && npm run seed && npm run dev
 
 @baseUrl = http://localhost:3001
-@adminEmail = admin@padel-kenitra.ma
+@adminEmail = admin@padelteammates.ma
 @adminPassword = ChangeMe123!
 
 ### 0. Health
@@ -181,6 +181,56 @@ Authorization: Bearer {{token1}}
 ### 19. L'organisateur annule le match (204) : il disparait, les joueurs sont notifies
 DELETE {{baseUrl}}/api/matches/{{matchId}}
 Authorization: Bearer {{token1}}
+
+### --- ADMINISTRATION DES CLUBS (admin) ---
+
+### 20. Liste vue par l'admin, clubs desactives compris
+GET {{baseUrl}}/api/clubs?includeInactive=true
+Authorization: Bearer {{adminToken}}
+
+### 21. Renommer un club
+PATCH {{baseUrl}}/api/clubs/{{clubId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "name": "Kénitra Racket Club" }
+
+### 22. Desactiver un club : il n'est plus propose, son historique reste
+PATCH {{baseUrl}}/api/clubs/{{clubId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "active": false }
+
+### 23. Reactiver le club
+PATCH {{baseUrl}}/api/clubs/{{clubId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "active": true }
+
+### 24. Suppression : 204 si le club n'a aucun match, 409 sinon (il faut le desactiver)
+DELETE {{baseUrl}}/api/clubs/{{clubId}}
+Authorization: Bearer {{adminToken}}
+
+### --- RESERVATION DU TERRAIN (match planifie) ---
+### La reservation se fait aupres du club, hors de l'app. N'importe quel joueur du match
+### la confirme ici ; les autres sont notifies. Plusieurs matchs peuvent partager un
+### creneau dans un club : il a plusieurs terrains.
+
+### 25. Le joueur 3 (simple invite) confirme que le terrain est reserve
+POST {{baseUrl}}/api/matches/{{matchId}}/booking
+Authorization: Bearer {{token3}}
+Content-Type: application/json
+
+{ "booked": true }
+
+### 26. Le terrain est finalement perdu : un autre joueur retire la reservation
+POST {{baseUrl}}/api/matches/{{matchId}}/booking
+Authorization: Bearer {{token2}}
+Content-Type: application/json
+
+{ "booked": false }
 
 ### 17. Classement (profils publics)
 GET {{baseUrl}}/api/users/leaderboard

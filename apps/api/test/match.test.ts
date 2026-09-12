@@ -137,7 +137,7 @@ describe('Matchs — planification & invitations', () => {
       .expect(400);
   });
 
-  it('empeche le conflit de creneau dans le meme club (409)', async () => {
+  it('accepte deux matchs sur le meme creneau dans un club (plusieurs terrains)', async () => {
     const clubId = await seedClub();
     const p = await fourPlayers();
     const other = await registerUser(app, { email: 'solo@example.com' });
@@ -148,10 +148,27 @@ describe('Matchs — planification & invitations', () => {
       .send({ clubId, date: MATCH_DAY, slot: '18:00-19:30', creatorTeam: 'A', invites: [] })
       .expect(201);
 
-    // Meme club + jour + creneau -> conflit.
+    // Meme club, meme creneau, mais d'autres joueurs : un club a plusieurs terrains.
     await request(app)
       .post('/api/matches')
       .set('Authorization', auth(other.token))
+      .send({ clubId, date: MATCH_DAY, slot: '18:00-19:30', creatorTeam: 'B', invites: [] })
+      .expect(201);
+  });
+
+  it('empeche un joueur d\'etre pris deux fois sur le meme creneau (409)', async () => {
+    const clubId = await seedClub();
+    const p = await fourPlayers();
+
+    await request(app)
+      .post('/api/matches')
+      .set('Authorization', auth(p[0].token))
+      .send({ clubId, date: MATCH_DAY, slot: '18:00-19:30', creatorTeam: 'A', invites: [] })
+      .expect(201);
+
+    await request(app)
+      .post('/api/matches')
+      .set('Authorization', auth(p[0].token))
       .send({ clubId, date: MATCH_DAY, slot: '18:00-19:30', creatorTeam: 'B', invites: [] })
       .expect(409);
   });
@@ -326,5 +343,62 @@ describe('Matchs — annulation et depart', () => {
       .expect(201);
 
     await cancel(p[0]!, matchId).expect(400);
+  });
+});
+
+describe('Matchs — reservation du terrain', () => {
+  async function plannedMatch(): Promise<{ p: TestUser[]; matchId: string }> {
+    const clubId = await seedClub();
+    const p = await fourPlayers();
+    const res = await request(app)
+      .post('/api/matches')
+      .set('Authorization', auth(p[0].token))
+      .send(createMatchBody(clubId, p))
+      .expect(201);
+    return { p, matchId: res.body.id as string };
+  }
+
+  function book(user: TestUser, matchId: string, booked: boolean) {
+    return request(app)
+      .post(`/api/matches/${matchId}/booking`)
+      .set('Authorization', auth(user.token))
+      .send({ booked });
+  }
+
+  it('un match est cree sans reservation de terrain', async () => {
+    const { p, matchId } = await plannedMatch();
+    const res = await request(app)
+      .get(`/api/matches/${matchId}`)
+      .set('Authorization', auth(p[0]!.token))
+      .expect(200);
+    expect(res.body.courtBookedAt).toBeNull();
+  });
+
+  it('n\'importe quel joueur du match confirme la reservation, les autres sont prevenus', async () => {
+    const { p, matchId } = await plannedMatch();
+    // p3 n'est qu'un invite : il peut confirmer comme les autres.
+    const res = await book(p[2]!, matchId, true).expect(200);
+    expect(res.body.courtBookedAt).not.toBeNull();
+    expect(res.body.courtBookedById).toBe(p[2]!.id);
+
+    const notifs = await request(app)
+      .get('/api/notifications')
+      .set('Authorization', auth(p[0]!.token))
+      .expect(200);
+    expect(notifs.body.filter((n: { type: string }) => n.type === 'COURT_BOOKED')).toHaveLength(1);
+  });
+
+  it('la reservation peut etre retiree par un autre joueur', async () => {
+    const { p, matchId } = await plannedMatch();
+    await book(p[0]!, matchId, true).expect(200);
+    const res = await book(p[1]!, matchId, false).expect(200);
+    expect(res.body.courtBookedAt).toBeNull();
+    expect(res.body.courtBookedById).toBeNull();
+  });
+
+  it('un joueur exterieur au match ne peut pas confirmer (403)', async () => {
+    const { matchId } = await plannedMatch();
+    const stranger = await registerUser(app, { email: 'stranger-booking@example.com' });
+    await book(stranger, matchId, true).expect(403);
   });
 });

@@ -123,7 +123,10 @@ export default function ProfileScreen() {
 
         <View style={styles.section}>
           {me.role === 'ADMIN' ? (
-            <Button title="Administration FRMT" variant="secondary" onPress={() => router.push('/admin/frmt')} />
+            <>
+              <Button title="Gérer les clubs" variant="secondary" onPress={() => router.push('/admin/clubs')} />
+              <Button title="Administration FRMT" variant="secondary" onPress={() => router.push('/admin/frmt')} />
+            </>
           ) : null}
           <Button title="Email et mot de passe" variant="secondary" onPress={() => router.push('/account/security')} />
           <Button title="Se déconnecter" variant="danger" onPress={() => dispatch(signedOut())} />
