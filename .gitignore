@@ -3,12 +3,14 @@ dist/
 dist-seed/
 
 # Secrets : ne jamais versionner (le depot est public).
-# Cle de compte de service Firebase / Google, utilisee pour les notifications push :
-# elle se televerse chez EAS, elle n'a rien a faire dans le code.
+# Cle de compte de service Firebase / Google, utilisee par le serveur d'Expo pour
+# envoyer les notifications : elle se televerse chez EAS, jamais dans le code.
 *firebase-adminsdk*.json
 *service-account*.json
 *serviceaccount*.json
-google-services.json
+# NB: google-services.json n'est PAS un secret et doit rester versionne : il est
+# embarque dans chaque APK distribue, ses cles sont restreintes au nom de package
+# et a la signature de l'app, et sans lui aucun build (autre poste, CI) n'aboutit.
 .env
 .claude/settings.local.json
 *.log
