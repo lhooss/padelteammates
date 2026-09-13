@@ -4,15 +4,15 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
+// Les clubs de padel reellement ouverts a Kenitra.
 const KENITRA_CLUBS = [
-  'Padel Club Kénitra',
-  'Mehdia Padel',
-  'Ouled Oujih Padel Center',
-  'Kénitra Racket Club',
+  'Lyautey Social Club',
+  'CMK : Centre Multisport Kénitra',
+  'Elite Padel Club Kenitra',
 ];
 
 async function main() {
-  const email = (process.env.ADMIN_EMAIL ?? 'admin@padelteammates.ma').toLowerCase();
+  const email = (process.env.ADMIN_EMAIL ?? 'admin@padelteammates.com').toLowerCase();
   const password = process.env.ADMIN_PASSWORD ?? 'ChangeMe123!';
   const name = process.env.ADMIN_NAME ?? 'Admin Kenitra';
 

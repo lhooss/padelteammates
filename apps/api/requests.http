@@ -2,7 +2,7 @@
 ### Prerequis: docker compose up -d && npm run prisma:migrate && npm run seed && npm run dev
 
 @baseUrl = http://localhost:3001
-@adminEmail = admin@padelteammates.ma
+@adminEmail = admin@padelteammates.com
 @adminPassword = ChangeMe123!
 
 ### 0. Health
@@ -213,7 +213,7 @@ PATCH {{baseUrl}}/api/clubs/{{clubId}}
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
-{ "name": "Kénitra Racket Club" }
+{ "name": "Elite Padel Club Kenitra" }
 
 ### 22. Desactiver un club : il n'est plus propose, son historique reste
 PATCH {{baseUrl}}/api/clubs/{{clubId}}

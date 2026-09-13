@@ -56,7 +56,7 @@ export default function ClubsAdminScreen() {
             label="Nom"
             value={name}
             onChangeText={setName}
-            placeholder="Ex. Mehdia Padel"
+            placeholder="Ex. Elite Padel Club Kenitra"
             autoCapitalize="words"
           />
           <TextField label="Ville" value={city} onChangeText={setCity} autoCapitalize="words" />
