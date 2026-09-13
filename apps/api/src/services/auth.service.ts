@@ -1,6 +1,9 @@
+import type { Role } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
+import { env } from '../config/env.js';
 import { hashPassword, verifyPassword } from '../utils/password.js';
 import { signToken } from '../utils/jwt.js';
+import { createRefreshToken, hashRefreshToken } from '../utils/refreshToken.js';
 import { BadRequestError, ConflictError, NotFoundError, UnauthorizedError } from '../utils/errors.js';
 import { frmtSummaryFor } from './frmt.service.js';
 import type {
@@ -27,6 +30,20 @@ const PUBLIC_USER_SELECT = {
   createdAt: true,
 } as const;
 
+// Ouvre une session : un jeton d'acces court, et un jeton de session longue dont
+// seule l'empreinte est stockee.
+async function issueSession(user: { id: string; role: Role }) {
+  const { raw, hash } = createRefreshToken();
+  await prisma.refreshToken.create({
+    data: {
+      tokenHash: hash,
+      userId: user.id,
+      expiresAt: new Date(Date.now() + env.REFRESH_TOKEN_DAYS * 24 * 60 * 60 * 1000),
+    },
+  });
+  return { token: signToken({ sub: user.id, role: user.role }), refreshToken: raw };
+}
+
 export async function register(input: RegisterInput) {
   const existing = await prisma.user.findUnique({ where: { email: input.email } });
   if (existing) throw new ConflictError('Email deja utilise');
@@ -42,8 +59,7 @@ export async function register(input: RegisterInput) {
     select: PUBLIC_USER_SELECT,
   });
 
-  const token = signToken({ sub: user.id, role: user.role });
-  return { user, token };
+  return { user, ...(await issueSession(user)) };
 }
 
 export async function login(input: LoginInput) {
@@ -53,9 +69,33 @@ export async function login(input: LoginInput) {
   const ok = await verifyPassword(input.password, found.passwordHash);
   if (!ok) throw new UnauthorizedError('Identifiants invalides');
 
-  const token = signToken({ sub: found.id, role: found.role });
   const user = await prisma.user.findUniqueOrThrow({ where: { id: found.id }, select: PUBLIC_USER_SELECT });
-  return { user, token };
+  return { user, ...(await issueSession(found)) };
+}
+
+// Renouvellement silencieux : le jeton presente est revoque et remplace. S'il a deja
+// servi, expire ou ete revoque, la session est finie et le joueur se reconnecte.
+export async function refreshSession(rawToken: string) {
+  const stored = await prisma.refreshToken.findUnique({
+    where: { tokenHash: hashRefreshToken(rawToken) },
+    include: { user: { select: { id: true, role: true } } },
+  });
+  if (!stored || stored.revokedAt || stored.expiresAt.getTime() <= Date.now()) {
+    throw new UnauthorizedError('Session expiree, reconnectez-vous');
+  }
+
+  await prisma.refreshToken.update({ where: { id: stored.id }, data: { revokedAt: new Date() } });
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: stored.userId }, select: PUBLIC_USER_SELECT });
+  return { user, ...(await issueSession(stored.user)) };
+}
+
+// Deconnexion : la session de cet appareil est revoquee. Silencieux si le jeton est
+// deja inconnu, pour ne rien reveler.
+export async function logout(rawToken: string): Promise<void> {
+  await prisma.refreshToken.updateMany({
+    where: { tokenHash: hashRefreshToken(rawToken), revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
 }
 
 export async function getMe(userId: string) {

@@ -78,6 +78,45 @@ Le profil d'un joueur licencié peut afficher son **classement national padel de
 - **Lien avec le profil** : la FRMT ne publie ni numéro de licence ni identifiant stable. Le joueur se retrouve dans le classement importé (nom + année de naissance) et demande le lien ; **l'administrateur le valide** avant qu'il soit visible des autres joueurs.
 - Ces données appartiennent à la FRMT : prévenir la fédération (voire lui demander un export officiel) avant une mise en production.
 
+## Mise en ligne (production)
+
+L'API se déploie en conteneur : le `Dockerfile` à la racine compile `shared` puis l'API, n'installe que ces deux workspaces (l'app mobile et Expo n'ont rien à faire dans une image serveur) et applique les migrations en attente au démarrage (`prisma migrate deploy`) avant d'accepter du trafic.
+
+Variables d'environnement à définir chez l'hébergeur :
+
+| Variable | Rôle |
+|---|---|
+| `DATABASE_URL` | Postgres managé |
+| `REDIS_URL` | Redis managé (verrous de saisie de score) |
+| `JWT_SECRET` | **long et aléatoire**, jamais celui du dépôt |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` | compte admin créé par `npm run seed` |
+| `CORS_ORIGIN` | facultatif ; vide = toutes origines, ce qui convient à une app mobile |
+| `PORT` | fourni par l'hébergeur |
+
+Protections actives en production :
+
+- **Limitation de débit** : 10 tentatives de connexion ou d'inscription par quart d'heure et par IP, 120 requêtes par minute pour le reste. **Active en production uniquement** : en développement, le téléphone et le PC sortent par la même IP, la limite bloquerait les essais sans rien protéger.
+- **`trust proxy`** : sans lui, la limitation verrait l'IP du proxy de l'hébergeur et punirait tous les joueurs pour un seul.
+- **Session longue** : le jeton d'accès dure 15 minutes et l'app le renouvelle en silence avec un jeton de session (60 jours par défaut, `REFRESH_TOKEN_DAYS`). Seule l'empreinte du jeton de session est stockée, et chaque renouvellement le remplace : un jeton ne sert qu'une fois. `POST /api/auth/logout` révoque la session de l'appareil.
+  - Limite connue : changer son mot de passe ne révoque pas les sessions déjà ouvertes.
+
+### Déployer l'API sur Railway
+
+1. Créer un projet, y ajouter **PostgreSQL** et **Redis** (Railway renseigne `DATABASE_URL` et `REDIS_URL`).
+2. Ajouter un service depuis le dépôt GitHub : le `Dockerfile` de la racine est détecté automatiquement.
+3. Renseigner les variables du tableau ci-dessus. Générer le secret avec `openssl rand -hex 48`, et choisir un vrai mot de passe admin.
+4. Déployer, puis vérifier `https://<domaine>/health`.
+5. Créer l'admin et les clubs, une seule fois : `railway run npm run seed`.
+
+### Construire l'APK (EAS)
+
+Le profil `preview` d'`apps/mobile/eas.json` produit un APK installable directement.
+
+1. Remplacer `EXPO_PUBLIC_API_URL` par l'URL Railway dans `eas.json` — sans quoi l'app cherchera une API sur le réseau local.
+2. `npx eas login` puis `npx eas init` (crée l'identifiant de projet Expo).
+3. `npx eas build --platform android --profile preview` : EAS renvoie un lien de téléchargement à partager.
+4. Les joueurs doivent autoriser l'installation depuis une source inconnue. Pour les mises à jour suivantes sans réinstallation, voir `expo-updates`.
+
 ## Tests
 
 Suite d'intégration **Vitest + Supertest** contre une vraie base Postgres/Redis (base `padel_teamates_test`, DB Redis 1) :

@@ -19,6 +19,11 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Mot de passe requis'),
 });
 
+// Jeton de session longue, echange contre un nouveau couple de jetons (rotation).
+export const refreshTokenSchema = z.object({
+  refreshToken: z.string().min(20, 'Jeton de session invalide'),
+});
+
 // --- Profil padel ---
 
 export const COURT_SIDES = ['LEFT', 'RIGHT', 'BOTH'] as const; // cote prefere sur le terrain
@@ -72,6 +77,7 @@ export type RegisterInput = z.infer<typeof registerSchema>;
 // Corps de requete accepte (avant application des valeurs par defaut), cote client.
 export type RegisterRequest = z.input<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 export type UpdateProfileRequest = z.input<typeof updateProfileSchema>;
 export type ChangeEmailInput = z.infer<typeof changeEmailSchema>;

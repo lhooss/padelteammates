@@ -20,6 +20,26 @@ Content-Type: application/json
 ###
 @adminToken = {{loginAdmin.response.body.token}}
 
+### 1b. Renouveler le jeton d'acces sans ressaisir le mot de passe.
+### Rotation : le jeton de session presente est revoque, un nouveau est renvoye.
+# @name refreshAdmin
+POST {{baseUrl}}/api/auth/refresh
+Content-Type: application/json
+
+{ "refreshToken": "{{loginAdmin.response.body.refreshToken}}" }
+
+### 1c. Rejouer le meme jeton de session : 401 attendu (il a deja servi)
+POST {{baseUrl}}/api/auth/refresh
+Content-Type: application/json
+
+{ "refreshToken": "{{loginAdmin.response.body.refreshToken}}" }
+
+### 1d. Deconnexion de cet appareil : la session longue est revoquee (204)
+POST {{baseUrl}}/api/auth/logout
+Content-Type: application/json
+
+{ "refreshToken": "{{refreshAdmin.response.body.refreshToken}}" }
+
 ### 2. Lister les clubs de Kenitra
 GET {{baseUrl}}/api/clubs
 Authorization: Bearer {{adminToken}}

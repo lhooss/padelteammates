@@ -32,8 +32,8 @@ export default function LoginScreen() {
     }
     setFieldErrors({});
     try {
-      const { token } = await login(parsed.data).unwrap();
-      dispatch(signedIn(token));
+      const { token, refreshToken } = await login(parsed.data).unwrap();
+      dispatch(signedIn({ token, refreshToken }));
     } catch {
       // Affichee via `error`.
     }

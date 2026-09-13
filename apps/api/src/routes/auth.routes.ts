@@ -6,6 +6,7 @@ import {
   changeEmailSchema,
   changePasswordSchema,
   loginSchema,
+  refreshTokenSchema,
   registerSchema,
   updateProfileSchema,
 } from '@padelteammates/shared';
@@ -28,6 +29,25 @@ authRouter.post(
   asyncHandler(async (req, res) => {
     const result = await authService.login(req.body);
     res.json(result);
+  }),
+);
+
+// Renouvellement silencieux du jeton d'acces, sans ressaisie du mot de passe.
+authRouter.post(
+  '/refresh',
+  validate(refreshTokenSchema),
+  asyncHandler(async (req, res) => {
+    res.json(await authService.refreshSession(req.body.refreshToken));
+  }),
+);
+
+// Deconnexion de cet appareil : la session longue est revoquee cote serveur.
+authRouter.post(
+  '/logout',
+  validate(refreshTokenSchema),
+  asyncHandler(async (req, res) => {
+    await authService.logout(req.body.refreshToken);
+    res.status(204).send();
   }),
 );
 

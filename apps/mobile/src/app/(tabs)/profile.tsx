@@ -13,9 +13,9 @@ import { BottomTabInset, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { errorMessage } from '@/lib/api-error';
 import { formatPhone, padelProfileRows } from '@/lib/profile';
-import { useMeQuery, useUnlinkFrmtMutation, useUpdateMeMutation } from '@/store/api';
+import { useLogoutMutation, useMeQuery, useUnlinkFrmtMutation, useUpdateMeMutation } from '@/store/api';
 import { signedOut } from '@/store/auth-slice';
-import { useAppDispatch } from '@/store/hooks';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
 
 export default function ProfileScreen() {
   const theme = useTheme();
@@ -23,6 +23,21 @@ export default function ProfileScreen() {
   const { data: me, isLoading, error, refetch } = useMeQuery();
   const [updateMe, { isLoading: saving }] = useUpdateMeMutation();
   const [unlinkFrmt, { isLoading: unlinking }] = useUnlinkFrmtMutation();
+  const [logout] = useLogoutMutation();
+  const refreshToken = useAppSelector((state) => state.auth.refreshToken);
+
+  // On revoque la session de cet appareil cote serveur avant d'effacer les jetons.
+  // Hors ligne ou session deja finie : la deconnexion locale a lieu quand meme.
+  async function signOut() {
+    if (refreshToken) {
+      try {
+        await logout(refreshToken).unwrap();
+      } catch {
+        // Sans importance : le jeton est efface juste apres.
+      }
+    }
+    dispatch(signedOut());
+  }
 
   if (!me) {
     return (
@@ -129,7 +144,7 @@ export default function ProfileScreen() {
             </>
           ) : null}
           <Button title="Email et mot de passe" variant="secondary" onPress={() => router.push('/account/security')} />
-          <Button title="Se déconnecter" variant="danger" onPress={() => dispatch(signedOut())} />
+          <Button title="Se déconnecter" variant="danger" onPress={() => void signOut()} />
         </View>
       </ScrollView>
     </Screen>

@@ -61,6 +61,7 @@ model User {
   createdMatches Match[]        @relation("CreatedBy")
   participations Participant[]
   notifications  Notification[]
+  refreshTokens  RefreshToken[]
 
   friendRequestsSent     Friendship[] @relation("FriendRequestsSent")
   friendRequestsReceived Friendship[] @relation("FriendRequestsReceived")
@@ -69,6 +70,22 @@ model User {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Session longue d'un appareil. Seule l'empreinte du jeton est stockee, et chaque
+// rafraichissement la remplace : un jeton ne sert qu'une fois (rotation).
+model RefreshToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 enum FriendshipStatus {

@@ -45,3 +45,46 @@ describe('Auth', () => {
     await request(app).get('/api/auth/me').expect(401);
   });
 });
+
+describe('Auth — session longue (renouvellement silencieux)', () => {
+  function createAccount(email: string) {
+    return request(app)
+      .post('/api/auth/register')
+      .send({ name: 'Joueur Test', email, password: 'password123' })
+      .expect(201);
+  }
+
+  it('echange le jeton de session contre un nouveau couple utilisable', async () => {
+    const created = await createAccount('refresh@example.com');
+    expect(created.body.refreshToken).toBeTypeOf('string');
+
+    const refreshed = await request(app)
+      .post('/api/auth/refresh')
+      .send({ refreshToken: created.body.refreshToken })
+      .expect(200);
+
+    expect(refreshed.body.refreshToken).not.toBe(created.body.refreshToken);
+    expect(refreshed.body.user.email).toBe('refresh@example.com');
+    // Le nouveau jeton d'acces ouvre bien les routes authentifiees.
+    await request(app).get('/api/auth/me').set('Authorization', auth(refreshed.body.token)).expect(200);
+  });
+
+  it('un jeton de session ne sert qu\'une fois : le rejeu est refuse (401)', async () => {
+    const created = await createAccount('rotation@example.com');
+    await request(app).post('/api/auth/refresh').send({ refreshToken: created.body.refreshToken }).expect(200);
+    await request(app).post('/api/auth/refresh').send({ refreshToken: created.body.refreshToken }).expect(401);
+  });
+
+  it('la deconnexion revoque la session de cet appareil (401 ensuite)', async () => {
+    const created = await createAccount('logout@example.com');
+    await request(app).post('/api/auth/logout').send({ refreshToken: created.body.refreshToken }).expect(204);
+    await request(app).post('/api/auth/refresh').send({ refreshToken: created.body.refreshToken }).expect(401);
+  });
+
+  it('rejette un jeton de session inconnu (401)', async () => {
+    await request(app)
+      .post('/api/auth/refresh')
+      .send({ refreshToken: 'x'.repeat(43) })
+      .expect(401);
+  });
+});

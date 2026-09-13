@@ -41,9 +41,9 @@ import type {
 } from '@/api/types';
 import { API_URL } from '@/config/api-url';
 
-import { signedOut } from './auth-slice';
+import { signedIn, signedOut } from './auth-slice';
 
-type WithAuth = { auth: { token: string | null } };
+type WithAuth = { auth: { token: string | null; refreshToken: string | null } };
 
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: `${API_URL}/api`,
@@ -54,12 +54,47 @@ const rawBaseQuery = fetchBaseQuery({
   },
 });
 
-// Un 401 sur une requete authentifiee = jeton expire ou invalide : on deconnecte.
-// (Un 401 au login, sans jeton, reste une simple erreur d'identifiants.)
+// Le jeton d'acces expire au bout de quelques minutes : plutot que de deconnecter le
+// joueur, on echange le jeton de session contre un nouveau couple et on rejoue la
+// requete. Un seul renouvellement a la fois, sinon dix requetes simultanees en
+// lanceraient dix, et la rotation en invaliderait neuf.
+let renewal: Promise<boolean> | null = null;
+
+function isRefreshCall(args: string | FetchArgs): boolean {
+  const url = typeof args === 'string' ? args : args.url;
+  return url === '/auth/refresh';
+}
+
+async function renewSession(
+  api: Parameters<BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError>>[1],
+  extra: Parameters<BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError>>[2],
+): Promise<boolean> {
+  const refreshToken = (api.getState() as WithAuth).auth.refreshToken;
+  if (!refreshToken) return false;
+
+  const response = await rawBaseQuery({ url: '/auth/refresh', method: 'POST', body: { refreshToken } }, api, extra);
+  const session = response.data as AuthResponse | undefined;
+  if (!session?.token) return false;
+
+  // Passe par signedIn : la session persistee suit le dernier couple recu.
+  api.dispatch(signedIn({ token: session.token, refreshToken: session.refreshToken }));
+  return true;
+}
+
 const baseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = async (args, api, extra) => {
   const hadToken = Boolean((api.getState() as WithAuth).auth.token);
-  const result = await rawBaseQuery(args, api, extra);
-  if (result.error?.status === 401 && hadToken) api.dispatch(signedOut());
+  let result = await rawBaseQuery(args, api, extra);
+
+  // Un 401 sans jeton (ex. mauvais identifiants au login) reste une erreur normale.
+  // Un 401 sur /auth/refresh signifie que la session longue est finie : on ne boucle pas.
+  if (result.error?.status === 401 && hadToken && !isRefreshCall(args)) {
+    renewal ??= renewSession(api, extra).finally(() => {
+      renewal = null;
+    });
+    if (await renewal) result = await rawBaseQuery(args, api, extra);
+    else api.dispatch(signedOut());
+  }
+
   return result;
 };
 
@@ -78,6 +113,10 @@ export const api = createApi({
     }),
     register: build.mutation<AuthResponse, RegisterRequest>({
       query: (body) => ({ url: '/auth/register', method: 'POST', body }),
+    }),
+    // Deconnexion : revoque la session de cet appareil cote serveur.
+    logout: build.mutation<void, string>({
+      query: (refreshToken) => ({ url: '/auth/logout', method: 'POST', body: { refreshToken } }),
     }),
     me: build.query<User, void>({
       query: () => '/auth/me',
@@ -286,6 +325,7 @@ export const api = createApi({
 export const {
   useLoginMutation,
   useRegisterMutation,
+  useLogoutMutation,
   useMeQuery,
   useUpdateMeMutation,
   useChangeEmailMutation,

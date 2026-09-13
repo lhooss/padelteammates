@@ -33,8 +33,8 @@ export default function RegisterScreen() {
     }
     setFieldErrors({});
     try {
-      const { token } = await register(parsed.data).unwrap();
-      dispatch(signedIn(token));
+      const { token, refreshToken } = await register(parsed.data).unwrap();
+      dispatch(signedIn({ token, refreshToken }));
     } catch {
       // Affichee via `error`.
     }

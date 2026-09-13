@@ -43,7 +43,8 @@ export interface User extends PadelProfile {
 
 export interface AuthResponse {
   user: User;
-  token: string;
+  token: string; // jeton d'acces, courte duree
+  refreshToken: string; // jeton de session de cet appareil
 }
 
 export interface Club {
