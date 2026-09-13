@@ -14,6 +14,7 @@
       "icon": "./assets/images/icon.png"
     },
     "android": {
+      "package": "com.padelteammates.app",
       "adaptiveIcon": {
         "backgroundColor": "#1F4FA0",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -41,6 +42,16 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "3661d9d6-506b-405a-973e-6e236c64a4ea"
+      }
+    },
+    "owner": "lhooss",
+    "updates": {
+      "url": "https://u.expo.dev/3661d9d6-506b-405a-973e-6e236c64a4ea"
     }
   }
 }
