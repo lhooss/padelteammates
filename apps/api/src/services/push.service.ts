@@ -41,20 +41,28 @@ function chunk<T>(items: T[], size: number): T[][] {
 // Envoie une notification push aux appareils de ces joueurs.
 // Volontairement silencieux : une notification manquee ne doit jamais faire
 // echouer l'action metier qui l'a declenchee (inviter, valider un score...).
+export interface PushOutcome {
+  devices: number; // appareils enregistres pour ces joueurs
+  accepted: number; // messages acceptes par Expo
+  errors: string[]; // refus d'Expo, tels quels (utile au diagnostic)
+}
+
 export async function sendPush(
   userIds: string[],
   notification: { type: string; message: string; matchId?: string | null },
-): Promise<void> {
-  if (userIds.length === 0) return;
+): Promise<PushOutcome> {
+  const outcome: PushOutcome = { devices: 0, accepted: 0, errors: [] };
+  if (userIds.length === 0) return outcome;
   // La suite de tests ne doit joindre aucun service externe.
-  if (env.NODE_ENV === 'test') return;
+  if (env.NODE_ENV === 'test') return outcome;
 
   try {
     const devices = await prisma.pushToken.findMany({
       where: { userId: { in: userIds } },
       select: { token: true },
     });
-    if (devices.length === 0) return;
+    outcome.devices = devices.length;
+    if (devices.length === 0) return outcome;
 
     const title = TITLES[notification.type] ?? 'Padelteammates';
 
@@ -75,16 +83,30 @@ export async function sendPush(
         body: JSON.stringify(messages),
       });
       if (!response.ok) {
-        console.error('[push] envoi refuse par Expo:', response.status);
+        const detail = `Expo a refuse l'envoi (HTTP ${response.status})`;
+        console.error('[push]', detail);
+        outcome.errors.push(detail);
         continue;
       }
 
       const body = (await response.json()) as { data?: ExpoTicket[] };
-      await dropUnregistered(batch.map((d) => d.token), body.data ?? []);
+      const tickets = body.data ?? [];
+      for (const ticket of tickets) {
+        if (ticket.status === 'ok') outcome.accepted += 1;
+        else if (ticket.message) {
+          console.error('[push] refus:', ticket.message);
+          outcome.errors.push(ticket.message);
+        }
+      }
+      await dropUnregistered(batch.map((d) => d.token), tickets);
     }
   } catch (err) {
-    console.error('[push] envoi impossible:', err);
+    const detail = err instanceof Error ? err.message : String(err);
+    console.error('[push] envoi impossible:', detail);
+    outcome.errors.push(detail);
   }
+
+  return outcome;
 }
 
 // Un appareil qui a desinstalle l'app renvoie "DeviceNotRegistered" : son jeton ne

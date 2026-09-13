@@ -20,6 +20,20 @@ notificationRouter.put(
   }),
 );
 
+// Diagnostic : s'envoie une notification de test et renvoie ce qui s'est passe.
+// `devices` a 0 signifie que l'appareil n'est pas enregistre (permission refusee
+// ou jeton non obtenu) ; des `errors` non vides viennent d'Expo ou de Firebase.
+notificationRouter.post(
+  '/test',
+  asyncHandler(async (req, res) => {
+    const outcome = await pushService.sendPush([req.auth!.userId], {
+      type: 'INVITE',
+      message: 'Notification de test : si vous voyez ceci, tout fonctionne.',
+    });
+    res.json(outcome);
+  }),
+);
+
 // Deconnexion : cet appareil ne doit plus rien recevoir.
 notificationRouter.delete(
   '/push-tokens/:token',
