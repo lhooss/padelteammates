@@ -44,6 +44,15 @@ describe('Auth', () => {
   it('refuse /me sans token (401)', async () => {
     await request(app).get('/api/auth/me').expect(401);
   });
+
+  it('repond 400 a un corps JSON malforme, pas 500', async () => {
+    const res = await request(app)
+      .post('/api/auth/login')
+      .set('Content-Type', 'application/json')
+      .send('{email:admin}')
+      .expect(400);
+    expect(res.body.error.code).toBe('BAD_REQUEST');
+  });
 });
 
 describe('Auth — session longue (renouvellement silencieux)', () => {

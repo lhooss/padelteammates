@@ -27,6 +27,28 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     }
   }
 
+  // Corps de requete illisible (JSON malforme) : c'est une faute du client, pas du
+  // serveur. body-parser porte deja un statut 4xx expose ; sans ce cas, l'erreur
+  // ressortait en 500 et polluait les journaux comme "non geree".
+  if (isExposedClientError(err)) {
+    res.status(err.statusCode).json({
+      error: { code: 'BAD_REQUEST', message: 'Corps de requete invalide (JSON attendu)' },
+    });
+    return;
+  }
+
   console.error('[error] non gere:', err);
   res.status(500).json({ error: { code: 'INTERNAL', message: 'Erreur interne du serveur' } });
+}
+
+// Erreur destinee au client, telle que celles d'express/body-parser.
+function isExposedClientError(err: unknown): err is { statusCode: number } {
+  if (typeof err !== 'object' || err === null) return false;
+  const candidate = err as { expose?: unknown; statusCode?: unknown };
+  return (
+    candidate.expose === true &&
+    typeof candidate.statusCode === 'number' &&
+    candidate.statusCode >= 400 &&
+    candidate.statusCode < 500
+  );
 }
