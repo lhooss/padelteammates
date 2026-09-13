@@ -2,14 +2,30 @@ import { z } from 'zod';
 
 const teamSchema = z.enum(['A', 'B']);
 
-// Creneau au format "HH:MM-HH:MM" (ex: "18:00-19:30"), debut < fin.
+const MINUTES_PER_DAY = 24 * 60;
+// Un match de padel dure 1h a 1h30 ; on borne large sans laisser passer l'absurde.
+const SLOT_MAX_MINUTES = 3 * 60;
+
+function timeToMinutes(time: string): number {
+  const [hours, minutes] = time.split(':').map(Number) as [number, number];
+  return hours * 60 + minutes;
+}
+
+// Duree d'un creneau, en tenant compte des creneaux tardifs qui passent minuit.
+export function slotDurationMinutes(slot: string): number {
+  const [start, end] = slot.split('-') as [string, string];
+  return (timeToMinutes(end) - timeToMinutes(start) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
+}
+
+// Creneau au format "HH:MM-HH:MM" (ex: "18:00-19:30"). La fin peut tomber apres
+// minuit ("23:00-00:30") : a Kenitra on joue tard. Seule la duree est bornee.
 const slotSchema = z
   .string()
   .regex(/^([01]\d|2[0-3]):[0-5]\d-([01]\d|2[0-3]):[0-5]\d$/, 'Creneau invalide (attendu HH:MM-HH:MM)')
   .refine((s) => {
-    const [start, end] = s.split('-') as [string, string];
-    return start < end;
-  }, 'Le debut du creneau doit preceder la fin');
+    const minutes = slotDurationMinutes(s);
+    return minutes > 0 && minutes <= SLOT_MAX_MINUTES;
+  }, 'Duree de creneau invalide (au plus 3 heures)');
 
 // Date du match: on accepte une date ISO (jour), pas dans le passe.
 const matchDateSchema = z.coerce.date().refine((d) => {

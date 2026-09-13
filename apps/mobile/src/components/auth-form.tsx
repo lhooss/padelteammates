@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
-import type { ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState, type ReactNode } from 'react';
+import { Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from './themed-text';
@@ -13,12 +13,38 @@ import { useTheme } from '@/hooks/use-theme';
 export function AuthForm({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  // Clavier ouvert : le terrain se replie pour laisser la place au formulaire, sinon
+  // il pousse les champs (mot de passe en particulier) sous le clavier.
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+
+  useEffect(() => {
+    const shown = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setKeyboardOpen(true),
+    );
+    const hidden = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardOpen(false),
+    );
+    return () => {
+      shown.remove();
+      hidden.remove();
+    };
+  }, []);
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
       <StatusBar style="light" />
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <View style={[styles.hero, { backgroundColor: theme.court, paddingTop: insets.top + Spacing.five }]}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag">
+        <View
+          style={[
+            styles.hero,
+            keyboardOpen ? styles.heroCompact : null,
+            { backgroundColor: theme.court, paddingTop: insets.top + (keyboardOpen ? Spacing.two : Spacing.five) },
+          ]}>
           <CourtBackdrop />
           <Text style={styles.wordmark}>{'Padel\nteammates'}</Text>
           <Text style={styles.tagline}>Vos matchs de padel à Kénitra</Text>
@@ -64,6 +90,11 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.six,
     justifyContent: 'flex-end',
     overflow: 'hidden',
+  },
+  // Clavier ouvert : on rend la hauteur au formulaire.
+  heroCompact: {
+    minHeight: 132,
+    paddingBottom: Spacing.three,
   },
   backdrop: {
     position: 'absolute',

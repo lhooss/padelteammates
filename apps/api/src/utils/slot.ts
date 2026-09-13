@@ -21,8 +21,17 @@ function timeZoneOffsetMs(ts: number, timeZone: string): number {
 
 // Instant (UTC) de la fin du creneau d'un match. `day` = jour du match a minuit UTC.
 export function slotEnd(day: Date, slot: string, timeZone = CLUB_TIME_ZONE): Date {
-  const [, end] = slot.split('-') as [string, string];
+  const [start, end] = slot.split('-') as [string, string];
   const [hours, minutes] = end.split(':').map(Number) as [number, number];
-  const wallClockAsUtc = Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), hours, minutes);
+  // Creneau tardif : "23:00-00:30" se termine le lendemain. Sans cela, la fin
+  // tomberait avant le debut et le score serait saisissable des le matin.
+  const endsNextDay = end <= start ? 1 : 0;
+  const wallClockAsUtc = Date.UTC(
+    day.getUTCFullYear(),
+    day.getUTCMonth(),
+    day.getUTCDate() + endsNextDay,
+    hours,
+    minutes,
+  );
   return new Date(wallClockAsUtc - timeZoneOffsetMs(wallClockAsUtc, timeZone));
 }

@@ -64,16 +64,16 @@ export function dayChipLabel(isoDay: string, index: number): string {
   return `${DAYS_SHORT[d.getUTCDay()]} ${d.getUTCDate()}`;
 }
 
-// "18:00" + 90 -> "19:30"
+// "18:00" + 90 -> "19:30" ; "23:00" + 90 -> "00:30" (on joue tard a Kenitra).
 export function addMinutesToTime(time: string, minutes: number): string {
   const [h, m] = time.split(':').map(Number) as [number, number];
-  const total = h * 60 + m + minutes;
+  const total = (h * 60 + m + minutes) % (24 * 60);
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
 }
 
 // Debuts de creneau possibles (08:00 -> `lastStart`, toutes les 30 min),
 // sans ceux deja passes si le jour choisi est aujourd'hui.
-export function slotStarts(isoDay: string, lastStart = '22:00', now = new Date()): string[] {
+export function slotStarts(isoDay: string, lastStart = '23:00', now = new Date()): string[] {
   const isToday = isoDay === upcomingDays(1, now)[0];
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
   const starts: string[] = [];

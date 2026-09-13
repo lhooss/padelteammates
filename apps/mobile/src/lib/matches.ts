@@ -52,8 +52,12 @@ export function canLeaveMatch(match: Match, meId: string): boolean {
 // (l'API, qui fait foi, reverifie avec le fuseau Africa/Casablanca).
 export function hasSlotEnded(match: Match, now = new Date()): boolean {
   const day = new Date(match.date);
-  const [hours, minutes] = (match.slot.split('-')[1] ?? '00:00').split(':').map(Number) as [number, number];
-  const end = new Date(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), hours, minutes);
+  const [start, endTime] = match.slot.split('-') as [string, string | undefined];
+  const [hours, minutes] = (endTime ?? '00:00').split(':').map(Number) as [number, number];
+  // Creneau tardif : "23:00-00:30" se termine le lendemain. Sinon un match du soir
+  // serait affiche comme deja termine.
+  const endsNextDay = endTime && endTime <= start ? 1 : 0;
+  const end = new Date(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate() + endsNextDay, hours, minutes);
   return now.getTime() >= end.getTime();
 }
 
