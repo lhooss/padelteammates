@@ -130,7 +130,20 @@ Le profil `preview` d'`apps/mobile/eas.json` produit un APK installable directem
 1. Vérifier que `EXPO_PUBLIC_API_URL` vaut bien `https://api.padelteammates.com` — sans quoi l'app cherchera une API sur le réseau local. **Construire l'APK seulement une fois le domaine joignable.**
 2. `npx eas login` puis `npx eas init` (crée l'identifiant de projet Expo).
 3. `npx eas build --platform android --profile preview` : EAS renvoie un lien de téléchargement à partager.
-4. Les joueurs doivent autoriser l'installation depuis une source inconnue. Pour les mises à jour suivantes sans réinstallation, voir `expo-updates`.
+4. Les joueurs doivent autoriser l'installation depuis une source inconnue.
+
+### Mettre à jour l'app sans reconstruire (expo-updates)
+
+Un build natif n'est nécessaire qu'une fois. Ensuite, tout changement **JavaScript** (écrans, textes, logique, corrections) se publie en quelques secondes et s'applique au lancement suivant de l'app :
+
+```bash
+npx eas update --branch preview --message "ce qui change"
+```
+
+- **Préalable, une seule fois** : `npx eas init` puis `npx eas update:configure`, qui renseigne l'URL des mises à jour dans `app.json`. Ces deux commandes exigent un compte Expo.
+- Le profil `preview` d'`eas.json` écoute le canal `preview` ; `production` écoute `production`.
+- `runtimeVersion` suit la **version de l'app** (`app.json`) : une mise à jour ne s'applique qu'aux APK de même version. C'est la garde-fou qui empêche d'envoyer du JavaScript à un binaire dont le code natif ne correspond plus.
+- **Un nouveau build reste obligatoire** si on ajoute une dépendance native (les notifications push, par exemple) ou si on change de version d'Expo.
 
 ## Tests
 

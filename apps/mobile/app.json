@@ -7,6 +7,9 @@
     "icon": "./assets/images/icon.png",
     "scheme": "padelteammates",
     "userInterfaceStyle": "automatic",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "ios": {
       "icon": "./assets/images/icon.png"
     },
