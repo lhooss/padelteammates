@@ -7,7 +7,7 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch --conditions=@padelteammates/source src/server.ts",
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && tsc -p tsconfig.seed.json",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
@@ -15,6 +15,7 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "seed": "tsx prisma/seed.ts",
+    "seed:prod": "node dist-seed/seed.js",
     "frmt:import": "tsx --conditions=@padelteammates/source scripts/frmt-import.ts",
     "test": "vitest run",
     "test:watch": "vitest"

@@ -19,6 +19,7 @@
     "prisma:deploy": "npm run prisma:deploy -w @padelteammates/api",
     "prisma:studio": "npm run prisma:studio -w @padelteammates/api",
     "seed": "npm run seed -w @padelteammates/api",
+    "seed:prod": "npm run seed:prod -w @padelteammates/api",
     "frmt:import": "npm run frmt:import -w @padelteammates/api"
   },
   "engines": {

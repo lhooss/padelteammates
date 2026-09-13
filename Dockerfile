@@ -41,6 +41,8 @@ RUN npm ci -w @padelteammates/shared -w @padelteammates/api --include-workspace-
 # Code compile + client Prisma genere a l'etape de build.
 COPY --from=build /app/packages/shared/dist packages/shared/dist
 COPY --from=build /app/apps/api/dist apps/api/dist
+# Le seed, compile a part : `npm run seed:prod` depuis un shell de l'hebergeur.
+COPY --from=build /app/apps/api/dist-seed apps/api/dist-seed
 COPY --from=build /app/node_modules/.prisma node_modules/.prisma
 # Les migrations : appliquees au demarrage, elles doivent etre dans l'image.
 COPY apps/api/prisma apps/api/prisma

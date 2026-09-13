@@ -1,0 +1,13 @@
+{
+  // Le seed est un outil d'administration : on le compile a part, dans son propre
+  // dossier, pour qu'il soit lancable en production avec `node`. Le compiler avec
+  // l'API deplacerait la racine de sortie (dist/src/server.js) et casserait le
+  // demarrage du conteneur ; et l'embarquer via tsx mettrait un compilateur
+  // TypeScript dans une image serveur.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist-seed",
+    "rootDir": "prisma"
+  },
+  "include": ["prisma/seed.ts"]
+}

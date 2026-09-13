@@ -106,7 +106,9 @@ Protections actives en production :
 2. Ajouter un service depuis le dépôt GitHub : le `Dockerfile` de la racine est détecté automatiquement.
 3. Renseigner les variables du tableau ci-dessus. Générer le secret avec `openssl rand -hex 48`, et choisir un vrai mot de passe admin.
 4. Déployer, puis vérifier `https://<domaine>/health` : la sonde interroge la base **et** Redis, et répond `503` si l'un des deux manque — un service qui écoute sans pouvoir servir ne doit pas passer pour sain.
-5. Créer l'admin et les clubs, une seule fois : `railway run npm run seed`.
+5. Créer l'admin et les clubs, une seule fois : ouvrir un shell sur le service et lancer **`npm run seed:prod`**.
+   - `railway run npm run seed` ne convient pas : la commande s'exécute sur le poste local avec un `DATABASE_URL` interne au réseau de l'hébergeur, donc injoignable.
+   - `npm run seed` ne convient pas non plus dans le conteneur : il passe par `tsx`, absent d'une image installée sans les dépendances de développement. D'où `seed:prod`, qui exécute le seed compilé.
 
 ### Brancher le domaine (api.padelteammates.com)
 
