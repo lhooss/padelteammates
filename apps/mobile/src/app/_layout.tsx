@@ -16,8 +16,9 @@ import { AppState, useColorScheme } from 'react-native';
 import { Provider } from 'react-redux';
 
 import { Colors, FontFamily } from '@/constants/theme';
+import { getPushRegistration } from '@/lib/push';
 import { store } from '@/store';
-import { api } from '@/store/api';
+import { api, useRegisterPushTokenMutation } from '@/store/api';
 import { restoreSession } from '@/store/auth-slice';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 
@@ -72,8 +73,19 @@ function RootNavigator({ fontsLoaded }: { fontsLoaded: boolean }) {
     if (status !== 'restoring' && fontsLoaded) void SplashScreen.hideAsync();
   }, [status, fontsLoaded]);
 
-  // Pas encore de notifications push : au retour dans l'app, on rafraichit ce qui a pu
-  // changer entre-temps (notifications, invitations et matchs, demandes d'ami).
+  // Cet appareil recoit les notifications push tant qu'il est connecte. Un refus de
+  // permission n'est pas une erreur : tout reste consultable dans la cloche.
+  const [registerPushToken] = useRegisterPushTokenMutation();
+  useEffect(() => {
+    if (status !== 'signedIn') return;
+    void (async () => {
+      const registration = await getPushRegistration();
+      if (registration) void registerPushToken(registration);
+    })();
+  }, [status, registerPushToken]);
+
+  // Au retour dans l'app, on rafraichit ce qui a pu changer entre-temps
+  // (notifications, invitations et matchs, demandes d'ami).
   useEffect(() => {
     if (status !== 'signedIn') return;
     const subscription = AppState.addEventListener('change', (state) => {

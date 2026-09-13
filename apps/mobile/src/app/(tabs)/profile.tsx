@@ -13,7 +13,14 @@ import { BottomTabInset, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { errorMessage } from '@/lib/api-error';
 import { formatPhone, padelProfileRows } from '@/lib/profile';
-import { useLogoutMutation, useMeQuery, useUnlinkFrmtMutation, useUpdateMeMutation } from '@/store/api';
+import { getPushRegistration } from '@/lib/push';
+import {
+  useLogoutMutation,
+  useMeQuery,
+  useRemovePushTokenMutation,
+  useUnlinkFrmtMutation,
+  useUpdateMeMutation,
+} from '@/store/api';
 import { signedOut } from '@/store/auth-slice';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 
@@ -24,11 +31,19 @@ export default function ProfileScreen() {
   const [updateMe, { isLoading: saving }] = useUpdateMeMutation();
   const [unlinkFrmt, { isLoading: unlinking }] = useUnlinkFrmtMutation();
   const [logout] = useLogoutMutation();
+  const [removePushToken] = useRemovePushTokenMutation();
   const refreshToken = useAppSelector((state) => state.auth.refreshToken);
 
   // On revoque la session de cet appareil cote serveur avant d'effacer les jetons.
   // Hors ligne ou session deja finie : la deconnexion locale a lieu quand meme.
   async function signOut() {
+    // Cet appareil ne doit plus recevoir les notifications de ce compte.
+    try {
+      const registration = await getPushRegistration();
+      if (registration) await removePushToken(registration.token).unwrap();
+    } catch {
+      // Sans importance : la deconnexion prime.
+    }
     if (refreshToken) {
       try {
         await logout(refreshToken).unwrap();

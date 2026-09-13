@@ -6,7 +6,7 @@ import { redis } from '../src/config/redis.js';
 // Vide toutes les tables entre les tests (isolation).
 export async function resetDb(): Promise<void> {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE TABLE "Notification","Score","JoinRequest","Participant","Match","Club","Friendship","FrmtLink","FrmtRankingEntry","FrmtImport","RefreshToken","User" RESTART IDENTITY CASCADE;',
+    'TRUNCATE TABLE "Notification","Score","JoinRequest","Participant","Match","Club","Friendship","FrmtLink","FrmtRankingEntry","FrmtImport","RefreshToken","PushToken","User" RESTART IDENTITY CASCADE;',
   );
   await redis.flushdb();
 }

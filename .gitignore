@@ -1,6 +1,14 @@
 node_modules/
 dist/
 dist-seed/
+
+# Secrets : ne jamais versionner (le depot est public).
+# Cle de compte de service Firebase / Google, utilisee pour les notifications push :
+# elle se televerse chez EAS, elle n'a rien a faire dans le code.
+*firebase-adminsdk*.json
+*service-account*.json
+*serviceaccount*.json
+google-services.json
 .env
 .claude/settings.local.json
 *.log

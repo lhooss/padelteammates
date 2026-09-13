@@ -1,11 +1,33 @@
 import { Router } from 'express';
+import { pushTokenSchema } from '@padelteammates/shared';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { validate } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/auth.js';
 import * as notificationService from '../services/notification.service.js';
+import * as pushService from '../services/push.service.js';
 
 export const notificationRouter = Router();
 
 notificationRouter.use(requireAuth);
+
+// Appareil du joueur : il recoit les notifications push tant que le jeton est enregistre.
+notificationRouter.put(
+  '/push-tokens',
+  validate(pushTokenSchema),
+  asyncHandler(async (req, res) => {
+    await pushService.registerPushToken(req.auth!.userId, req.body.token, req.body.platform);
+    res.status(204).send();
+  }),
+);
+
+// Deconnexion : cet appareil ne doit plus rien recevoir.
+notificationRouter.delete(
+  '/push-tokens/:token',
+  asyncHandler(async (req, res) => {
+    await pushService.removePushToken(req.auth!.userId, req.params.token!);
+    res.status(204).send();
+  }),
+);
 
 notificationRouter.get(
   '/',

@@ -1,5 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
+import { sendPush } from './push.service.js';
 
 type NotificationType =
   | 'INVITE'
@@ -40,6 +41,7 @@ export async function notify(
       matchId: args.matchId ?? null,
     },
   });
+  void sendPush([args.userId], args);
 }
 
 export async function notifyMany(
@@ -56,6 +58,9 @@ export async function notifyMany(
       matchId: args.matchId ?? null,
     })),
   });
+  // Non attendu, et volontairement : l'envoi push ne doit ni ralentir ni faire
+  // echouer l'action metier. La notification reste dans la cloche dans tous les cas.
+  void sendPush(userIds, args);
 }
 
 export function listNotifications(userId: string, unreadOnly = false) {

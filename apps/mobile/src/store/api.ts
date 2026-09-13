@@ -280,6 +280,13 @@ export const api = createApi({
       query: (id) => ({ url: `/notifications/${id}/read`, method: 'POST' }),
       invalidatesTags: ['Notification'],
     }),
+    // Notifications push : l'appareil s'enregistre a la connexion, se retire a la deconnexion.
+    registerPushToken: build.mutation<void, { token: string; platform: 'android' | 'ios' }>({
+      query: (body) => ({ url: '/notifications/push-tokens', method: 'PUT', body }),
+    }),
+    removePushToken: build.mutation<void, string>({
+      query: (token) => ({ url: `/notifications/push-tokens/${encodeURIComponent(token)}`, method: 'DELETE' }),
+    }),
     markAllNotificationsRead: build.mutation<void, void>({
       query: () => ({ url: '/notifications/read-all', method: 'POST' }),
       invalidatesTags: ['Notification'],
@@ -360,6 +367,8 @@ export const {
   useNotificationsQuery,
   useMarkNotificationReadMutation,
   useMarkAllNotificationsReadMutation,
+  useRegisterPushTokenMutation,
+  useRemovePushTokenMutation,
   useFrmtStatusQuery,
   useFrmtSearchQuery,
   useLinkFrmtMutation,

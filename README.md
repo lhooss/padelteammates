@@ -132,6 +132,18 @@ Le profil `preview` d'`apps/mobile/eas.json` produit un APK installable directem
 3. `npx eas build --platform android --profile preview` : EAS renvoie un lien de téléchargement à partager.
 4. Les joueurs doivent autoriser l'installation depuis une source inconnue.
 
+### Notifications push
+
+Chaque notification écrite en base part aussi sur les téléphones : `notify` / `notifyMany` déclenchent l'envoi, donc **aucun service métier n'a eu à changer**. L'envoi est volontairement **silencieux et non attendu** — une invitation ne doit pas échouer parce qu'un téléphone est injoignable, et la notification reste consultable dans la cloche.
+
+- L'app enregistre son appareil à la connexion (`PUT /api/notifications/push-tokens`) et le retire à la déconnexion. Un jeton déjà connu est **réattribué** au dernier compte connecté : sinon l'ancien propriétaire du téléphone continuerait de recevoir les notifications.
+- Les appareils qui ont désinstallé l'app renvoient `DeviceNotRegistered` : leur jeton est supprimé automatiquement, pour ne pas réessayer indéfiniment.
+- Aucun appel réseau n'est fait pendant les tests (`NODE_ENV=test`).
+
+> **Android : Firebase est obligatoire.** Les notifications d'une app installée transitent par Firebase Cloud Messaging. Créer un projet Firebase, puis téléverser sa clé de compte de service chez EAS (`eas credentials` → Android → *FCM V1 service account key*). Sans cette étape, tout fonctionne **sauf** l'arrivée des notifications.
+
+> Un refus de permission n'est pas une erreur : l'app reste pleinement utilisable, les notifications s'affichent dans la cloche. Les push ne fonctionnent pas sur émulateur.
+
 ### Mettre à jour l'app sans reconstruire (expo-updates)
 
 Un build natif n'est nécessaire qu'une fois. Ensuite, tout changement **JavaScript** (écrans, textes, logique, corrections) se publie en quelques secondes et s'applique au lancement suivant de l'app :
