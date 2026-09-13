@@ -10,6 +10,8 @@ import { userRouter } from './routes/user.routes.js';
 import { notificationRouter } from './routes/notification.routes.js';
 import { errorHandler, notFoundHandler } from './middleware/error.js';
 import { env } from './config/env.js';
+import { prisma } from './config/prisma.js';
+import { redis } from './config/redis.js';
 import { apiLimiter, authLimiter } from './middleware/rateLimit.js';
 
 export function createApp(): Express {
@@ -24,9 +26,19 @@ export function createApp(): Express {
   app.use(express.json({ limit: '256kb' }));
   app.use(apiLimiter);
 
-  // Avant l'authentification : sonde de l'hebergeur, jamais limitee.
+  // Sonde de l'hebergeur, jamais limitee. Elle interroge la base et Redis : un serveur
+  // qui ecoute mais ne peut rien servir doit etre declare indisponible, sinon un
+  // deploiement casse passe pour sain.
   app.get('/health', (_req, res) => {
-    res.json({ status: 'ok', service: 'padelteammates', version: '0.1.0' });
+    void (async () => {
+      try {
+        await prisma.$queryRaw`SELECT 1`;
+        await redis.ping();
+        res.json({ status: 'ok', service: 'padelteammates', version: '0.1.0' });
+      } catch {
+        res.status(503).json({ status: 'unavailable', service: 'padelteammates', version: '0.1.0' });
+      }
+    })();
   });
 
   // Limite stricte sur les portes d'entree du compte.

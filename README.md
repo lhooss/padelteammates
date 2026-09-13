@@ -105,14 +105,27 @@ Protections actives en production :
 1. Créer un projet, y ajouter **PostgreSQL** et **Redis** (Railway renseigne `DATABASE_URL` et `REDIS_URL`).
 2. Ajouter un service depuis le dépôt GitHub : le `Dockerfile` de la racine est détecté automatiquement.
 3. Renseigner les variables du tableau ci-dessus. Générer le secret avec `openssl rand -hex 48`, et choisir un vrai mot de passe admin.
-4. Déployer, puis vérifier `https://<domaine>/health`.
+4. Déployer, puis vérifier `https://<domaine>/health` : la sonde interroge la base **et** Redis, et répond `503` si l'un des deux manque — un service qui écoute sans pouvoir servir ne doit pas passer pour sain.
 5. Créer l'admin et les clubs, une seule fois : `railway run npm run seed`.
+
+### Brancher le domaine (api.padelteammates.com)
+
+L'app vise `https://api.padelteammates.com`, jamais le sous-domaine de l'hébergeur : l'URL est **gravée dans l'APK** installé chez les joueurs. Passer par un domaine qu'on possède permet de changer d'hébergeur plus tard en déplaçant un enregistrement DNS, sans casser les app déjà installées.
+
+1. Dans Railway, service API → réseau → ajouter un domaine personnalisé `api.padelteammates.com`. Railway affiche une cible en `.up.railway.app` et attend la vérification.
+2. Chez GoDaddy, dans la zone DNS du domaine, créer un enregistrement **CNAME** : nom `api`, valeur = la cible fournie par Railway, TTL 600.
+3. Attendre la propagation (souvent quelques minutes, jusqu'à une heure). Railway émet le certificat TLS automatiquement, sans action.
+4. Vérifier : `https://api.padelteammates.com/health`.
+
+> Ne pas utiliser la redirection de domaine de GoDaddy : elle renvoie du HTTP 301 vers une page, elle ne sert pas une API.
+
+> Le domaine racine (`padelteammates.com`) reste libre pour une page de présentation et de téléchargement de l'APK. Un CNAME est impossible sur un domaine racine ; l'API vit donc sur le sous-domaine `api.`.
 
 ### Construire l'APK (EAS)
 
 Le profil `preview` d'`apps/mobile/eas.json` produit un APK installable directement.
 
-1. Remplacer `EXPO_PUBLIC_API_URL` par l'URL Railway dans `eas.json` — sans quoi l'app cherchera une API sur le réseau local.
+1. Vérifier que `EXPO_PUBLIC_API_URL` vaut bien `https://api.padelteammates.com` — sans quoi l'app cherchera une API sur le réseau local. **Construire l'APK seulement une fois le domaine joignable.**
 2. `npx eas login` puis `npx eas init` (crée l'identifiant de projet Expo).
 3. `npx eas build --platform android --profile preview` : EAS renvoie un lien de téléchargement à partager.
 4. Les joueurs doivent autoriser l'installation depuis une source inconnue. Pour les mises à jour suivantes sans réinstallation, voir `expo-updates`.

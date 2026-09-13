@@ -14,7 +14,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://REMPLACER-PAR-L-URL-RAILWAY"
+        "EXPO_PUBLIC_API_URL": "https://api.padelteammates.com"
       }
     },
     "production": {
@@ -23,7 +23,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://REMPLACER-PAR-L-URL-RAILWAY"
+        "EXPO_PUBLIC_API_URL": "https://api.padelteammates.com"
       }
     }
   },

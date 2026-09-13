@@ -5,6 +5,10 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 
+# Sans openssl, Prisma ne detecte pas la version presente, se rabat sur OpenSSL 1.1
+# et genere un moteur que l'image (OpenSSL 3) ne peut pas charger.
+RUN apk add --no-cache openssl
+
 # Les manifestes d'abord : le cache Docker n'est invalide que si les dependances changent.
 COPY package.json package-lock.json ./
 COPY packages/shared/package.json packages/shared/
@@ -23,6 +27,9 @@ RUN npm run build
 FROM node:22-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
+
+# Necessaire aussi ici : c'est le moteur Prisma copie plus bas qui s'y lie.
+RUN apk add --no-cache openssl
 
 COPY package.json package-lock.json ./
 COPY packages/shared/package.json packages/shared/
