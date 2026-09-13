@@ -21,15 +21,21 @@ export interface PushRegistration {
   platform: PushPlatform;
 }
 
-// Jeton de notification de cet appareil, ou null si les push ne sont pas possibles :
-// emulateur, permission refusee, ou projet Expo introuvable. Aucun de ces cas n'est
-// une erreur : l'app reste utilisable, avec les notifications dans la cloche.
-export async function getPushRegistration(): Promise<PushRegistration | null> {
-  if (!Device.isDevice) return null;
-  if (Platform.OS !== 'android' && Platform.OS !== 'ios') return null;
+// Pourquoi les notifications ne fonctionnent pas, le cas echeant. Un echec est
+// silencieux pour le joueur (l'app reste utilisable, tout est dans la cloche),
+// mais il doit rester lisible : sans cela, un "rien ne marche" est indiagnosticable.
+export type PushDiagnostic =
+  | { status: 'ok'; registration: PushRegistration }
+  | { status: 'emulator' }
+  | { status: 'denied' }
+  | { status: 'no-project-id' }
+  | { status: 'error'; message: string };
 
-  const granted = await ensurePermission();
-  if (!granted) return null;
+export async function diagnosePush(): Promise<PushDiagnostic> {
+  if (!Device.isDevice) return { status: 'emulator' };
+  if (Platform.OS !== 'android' && Platform.OS !== 'ios') return { status: 'emulator' };
+
+  if (!(await ensurePermission())) return { status: 'denied' };
 
   if (Platform.OS === 'android') {
     // Sans canal declare, Android n'affiche aucune notification.
@@ -40,15 +46,44 @@ export async function getPushRegistration(): Promise<PushRegistration | null> {
     });
   }
 
-  const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
-  if (!projectId) return null;
+  const projectId = resolveProjectId();
+  if (!projectId) return { status: 'no-project-id' };
 
   try {
     const { data } = await Notifications.getExpoPushTokenAsync({ projectId });
-    return { token: data, platform: Platform.OS };
-  } catch {
-    // Ex. build sans configuration FCM : on n'insiste pas.
-    return null;
+    return { status: 'ok', registration: { token: data, platform: Platform.OS } };
+  } catch (err) {
+    return { status: 'error', message: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+// Jeton de cet appareil, ou null si les notifications ne sont pas possibles.
+export async function getPushRegistration(): Promise<PushRegistration | null> {
+  const diagnostic = await diagnosePush();
+  return diagnostic.status === 'ok' ? diagnostic.registration : null;
+}
+
+// L'identifiant du projet Expo peut venir de deux endroits selon que l'app tourne
+// depuis son binaire ou depuis une mise a jour : on essaie les deux.
+function resolveProjectId(): string | undefined {
+  const fromEas = Constants.easConfig?.projectId;
+  const fromExtra = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
+  return fromEas ?? fromExtra;
+}
+
+// Message court, affichable tel quel dans l'ecran Profil.
+export function describePushDiagnostic(diagnostic: PushDiagnostic): string {
+  switch (diagnostic.status) {
+    case 'ok':
+      return 'Cet appareil est enregistré.';
+    case 'emulator':
+      return 'Les notifications ne fonctionnent pas sur émulateur.';
+    case 'denied':
+      return 'Notifications refusées. Autorisez-les dans les réglages du téléphone.';
+    case 'no-project-id':
+      return 'Identifiant de projet Expo introuvable dans cette version de l\'app.';
+    case 'error':
+      return `Échec : ${diagnostic.message}`;
   }
 }
 

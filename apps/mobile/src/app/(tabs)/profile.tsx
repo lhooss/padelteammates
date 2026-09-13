@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Switch, View } from 'react-native';
 
 import { Button } from '@/components/button';
@@ -13,7 +14,7 @@ import { BottomTabInset, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { errorMessage } from '@/lib/api-error';
 import { formatPhone, padelProfileRows } from '@/lib/profile';
-import { getPushRegistration } from '@/lib/push';
+import { describePushDiagnostic, diagnosePush, getPushRegistration, type PushDiagnostic } from '@/lib/push';
 import {
   useLogoutMutation,
   useMeQuery,
@@ -33,6 +34,13 @@ export default function ProfileScreen() {
   const [logout] = useLogoutMutation();
   const [removePushToken] = useRemovePushTokenMutation();
   const refreshToken = useAppSelector((state) => state.auth.refreshToken);
+
+  // Etat des notifications sur cet appareil. Un echec est silencieux pour ne pas
+  // gener le joueur, mais il doit rester lisible quelque part.
+  const [pushDiagnostic, setPushDiagnostic] = useState<PushDiagnostic | null>(null);
+  useEffect(() => {
+    void diagnosePush().then(setPushDiagnostic);
+  }, []);
 
   // On revoque la session de cet appareil cote serveur avant d'effacer les jetons.
   // Hors ligne ou session deja finie : la deconnexion locale a lieu quand meme.
@@ -150,6 +158,13 @@ export default function ProfileScreen() {
             accessibilityLabel="Profil public"
           />
         </ThemedView>
+
+        <View style={styles.section}>
+          <SectionTitle>Notifications</SectionTitle>
+          <ThemedText type="small" themeColor={pushDiagnostic?.status === 'ok' ? 'textSecondary' : 'danger'}>
+            {pushDiagnostic ? describePushDiagnostic(pushDiagnostic) : 'Vérification…'}
+          </ThemedText>
+        </View>
 
         <View style={styles.section}>
           {me.role === 'ADMIN' ? (
