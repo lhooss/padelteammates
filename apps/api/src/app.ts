@@ -10,6 +10,7 @@ import { userRouter } from './routes/user.routes.js';
 import { notificationRouter } from './routes/notification.routes.js';
 import { errorHandler, notFoundHandler } from './middleware/error.js';
 import { env } from './config/env.js';
+import { PRIVACY_HTML } from './legal/privacy.js';
 import { prisma } from './config/prisma.js';
 import { redis } from './config/redis.js';
 import { apiLimiter, authLimiter } from './middleware/rateLimit.js';
@@ -25,6 +26,12 @@ export function createApp(): Express {
   app.use(cors({ origin: env.CORS_ORIGIN ? env.CORS_ORIGIN.split(',').map((o) => o.trim()) : true }));
   app.use(express.json({ limit: '256kb' }));
   app.use(apiLimiter);
+
+  // Politique de confidentialite : Google Play exige une URL publique, consultable
+  // sans compte. Hors authentification et hors limitation de debit.
+  app.get('/privacy', (_req, res) => {
+    res.type('html').send(PRIVACY_HTML);
+  });
 
   // Sonde de l'hebergeur, jamais limitee. Elle interroge la base et Redis : un serveur
   // qui ecoute mais ne peut rien servir doit etre declare indisponible, sinon un
