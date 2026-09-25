@@ -63,6 +63,7 @@ model User {
   notifications  Notification[]
   refreshTokens  RefreshToken[]
   pushTokens     PushToken[]
+  passwordResets PasswordReset[]
 
   friendRequestsSent     Friendship[] @relation("FriendRequestsSent")
   friendRequestsReceived Friendship[] @relation("FriendRequestsReceived")
@@ -71,6 +72,24 @@ model User {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Demande de reinitialisation de mot de passe. Seule l'empreinte du code est
+// stockee ; il est court (6 chiffres) donc a duree de vie breve, a usage unique,
+// et le nombre d'essais est borne : sans cela, six chiffres se devinent.
+model PasswordReset {
+  id        String    @id @default(cuid())
+  codeHash  String
+  expiresAt DateTime
+  usedAt    DateTime?
+  attempts  Int       @default(0)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 // Appareil sur lequel un joueur recoit les notifications push (jeton Expo).

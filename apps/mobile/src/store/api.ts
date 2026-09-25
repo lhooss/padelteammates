@@ -114,6 +114,14 @@ export const api = createApi({
     register: build.mutation<AuthResponse, RegisterRequest>({
       query: (body) => ({ url: '/auth/register', method: 'POST', body }),
     }),
+    // Mot de passe oublie : un code est envoye par email. La reponse est la meme
+    // que l'adresse existe ou non, pour ne rien reveler.
+    forgotPassword: build.mutation<void, string>({
+      query: (email) => ({ url: '/auth/forgot-password', method: 'POST', body: { email } }),
+    }),
+    resetPassword: build.mutation<void, { email: string; code: string; newPassword: string }>({
+      query: (body) => ({ url: '/auth/reset-password', method: 'POST', body }),
+    }),
     // Deconnexion : revoque la session de cet appareil cote serveur.
     logout: build.mutation<void, string>({
       query: (refreshToken) => ({ url: '/auth/logout', method: 'POST', body: { refreshToken } }),
@@ -333,6 +341,8 @@ export const {
   useLoginMutation,
   useRegisterMutation,
   useLogoutMutation,
+  useForgotPasswordMutation,
+  useResetPasswordMutation,
   useMeQuery,
   useUpdateMeMutation,
   useChangeEmailMutation,

@@ -51,6 +51,10 @@ export function createApp(): Express {
   // Limite stricte sur les portes d'entree du compte.
   app.use('/api/auth/login', authLimiter);
   app.use('/api/auth/register', authLimiter);
+  // Sans cette limite, on pourrait essayer les codes a six chiffres en masse,
+  // et demander des codes en boucle pour inonder une boite aux lettres.
+  app.use('/api/auth/forgot-password', authLimiter);
+  app.use('/api/auth/reset-password', authLimiter);
   app.use('/api/auth', authRouter);
   app.use('/api/clubs', clubRouter);
   app.use('/api/matches', matchRouter);

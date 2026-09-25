@@ -146,6 +146,10 @@ function RootNavigator({ fontsLoaded }: { fontsLoaded: boolean }) {
         <Stack.Protected guard={status !== 'signedIn'}>
           <Stack.Screen name="(auth)" />
         </Stack.Protected>
+        <Stack.Screen
+          name="forgot-password"
+          options={{ headerShown: true, title: 'Mot de passe oublié', presentation: 'modal' }}
+        />
       </Stack>
     </ThemeProvider>
   );

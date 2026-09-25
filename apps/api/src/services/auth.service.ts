@@ -4,6 +4,13 @@ import { env } from '../config/env.js';
 import { hashPassword, verifyPassword } from '../utils/password.js';
 import { signToken } from '../utils/jwt.js';
 import { createRefreshToken, hashRefreshToken } from '../utils/refreshToken.js';
+import {
+  createResetCode,
+  hashResetCode,
+  RESET_CODE_TTL_MINUTES,
+  RESET_MAX_ATTEMPTS,
+} from '../utils/resetCode.js';
+import { passwordResetEmail, sendEmail } from './email.service.js';
 import { BadRequestError, ConflictError, NotFoundError, UnauthorizedError } from '../utils/errors.js';
 import { frmtSummaryFor } from './frmt.service.js';
 import type {
@@ -11,6 +18,7 @@ import type {
   ChangePasswordInput,
   LoginInput,
   RegisterInput,
+  ResetPasswordInput,
   UpdateProfileInput,
 } from '@padelteammates/shared';
 
@@ -96,6 +104,67 @@ export async function logout(rawToken: string): Promise<void> {
     where: { tokenHash: hashRefreshToken(rawToken), revokedAt: null },
     data: { revokedAt: new Date() },
   });
+}
+
+// Demande de reinitialisation. Ne dit jamais si l'adresse existe : sinon la route
+// devient un moyen de decouvrir qui possede un compte.
+export async function requestPasswordReset(email: string): Promise<void> {
+  const user = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+  if (!user) return;
+
+  const { code, hash } = createResetCode();
+  await prisma.$transaction([
+    // Une nouvelle demande annule les precedentes : un seul code valable a la fois.
+    prisma.passwordReset.updateMany({
+      where: { userId: user.id, usedAt: null },
+      data: { usedAt: new Date() },
+    }),
+    prisma.passwordReset.create({
+      data: {
+        userId: user.id,
+        codeHash: hash,
+        expiresAt: new Date(Date.now() + RESET_CODE_TTL_MINUTES * 60 * 1000),
+      },
+    }),
+  ]);
+
+  await sendEmail({ to: email, ...passwordResetEmail(code, RESET_CODE_TTL_MINUTES) });
+}
+
+// Verifie le code et change le mot de passe. Toutes les sessions sont revoquees :
+// si le compte etait compromis, les appareils de l'intrus perdent la main.
+export async function resetPassword(input: ResetPasswordInput): Promise<void> {
+  const invalid = new BadRequestError('Code invalide ou expire');
+
+  const user = await prisma.user.findUnique({ where: { email: input.email }, select: { id: true } });
+  if (!user) throw invalid;
+
+  const reset = await prisma.passwordReset.findFirst({
+    where: { userId: user.id, usedAt: null },
+    orderBy: { createdAt: 'desc' },
+  });
+  if (!reset || reset.expiresAt.getTime() <= Date.now()) throw invalid;
+
+  if (reset.attempts >= RESET_MAX_ATTEMPTS) {
+    await prisma.passwordReset.update({ where: { id: reset.id }, data: { usedAt: new Date() } });
+    throw new BadRequestError('Trop d\'essais : demandez un nouveau code');
+  }
+
+  if (reset.codeHash !== hashResetCode(input.code)) {
+    await prisma.passwordReset.update({ where: { id: reset.id }, data: { attempts: { increment: 1 } } });
+    throw invalid;
+  }
+
+  const passwordHash = await hashPassword(input.newPassword);
+  await prisma.$transaction([
+    prisma.user.update({ where: { id: user.id }, data: { passwordHash } }),
+    prisma.passwordReset.update({ where: { id: reset.id }, data: { usedAt: new Date() } }),
+    // Le mot de passe a change : plus aucune session ouverte ne reste valable.
+    prisma.refreshToken.updateMany({
+      where: { userId: user.id, revokedAt: null },
+      data: { revokedAt: new Date() },
+    }),
+  ]);
 }
 
 export async function getMe(userId: string) {

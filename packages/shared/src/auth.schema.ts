@@ -24,6 +24,23 @@ export const refreshTokenSchema = z.object({
   refreshToken: z.string().min(20, 'Jeton de session invalide'),
 });
 
+// --- Mot de passe oublie ---
+
+// On demande un code par email. La reponse ne dit jamais si l'adresse existe.
+export const forgotPasswordSchema = z.object({
+  email: emailSchema,
+});
+
+// Code a 6 chiffres recu par email, puis nouveau mot de passe.
+export const resetPasswordSchema = z.object({
+  email: emailSchema,
+  code: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, 'Le code comporte 6 chiffres'),
+  newPassword: passwordSchema,
+});
+
 // --- Profil padel ---
 
 export const COURT_SIDES = ['LEFT', 'RIGHT', 'BOTH'] as const; // cote prefere sur le terrain
@@ -78,6 +95,8 @@ export type RegisterInput = z.infer<typeof registerSchema>;
 export type RegisterRequest = z.input<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>;
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 export type UpdateProfileRequest = z.input<typeof updateProfileSchema>;
 export type ChangeEmailInput = z.infer<typeof changeEmailSchema>;

@@ -15,6 +15,10 @@ const envSchema = z.object({
   // Origines autorisees (CORS), separees par des virgules. Vide = toutes : c'est le cas
   // d'une app mobile native, qui n'envoie pas d'origine. A restreindre si l'app web est publiee.
   CORS_ORIGIN: z.string().optional(),
+  // Envoi d'emails (mot de passe oublie). Sans cle, l'API fonctionne mais n'envoie
+  // rien : le code est alors seulement journalise, ce qui depanne en developpement.
+  RESEND_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().default('Padelteammates <onboarding@resend.dev>'),
   // Import automatique du classement FRMT (au plus une fois par 24 h). "false" pour le couper.
   FRMT_IMPORT_ENABLED: z
     .enum(['true', 'false'])

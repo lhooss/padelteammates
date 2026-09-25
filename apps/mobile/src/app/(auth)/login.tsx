@@ -64,6 +64,9 @@ export default function LoginScreen() {
         />
         {error ? <ThemedText themeColor="danger">{errorMessage(error)}</ThemedText> : null}
         <Button title="Se connecter" onPress={submit} loading={isLoading} />
+        <Link href="/forgot-password" style={[styles.link, { color: theme.primary }]}>
+          Mot de passe oublié ?
+        </Link>
         <Link href="/register" style={[styles.link, { color: theme.primary }]}>
           Pas encore de compte ? Créer un compte
         </Link>

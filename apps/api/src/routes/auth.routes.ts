@@ -5,9 +5,11 @@ import { requireAuth } from '../middleware/auth.js';
 import {
   changeEmailSchema,
   changePasswordSchema,
+  forgotPasswordSchema,
   loginSchema,
   refreshTokenSchema,
   registerSchema,
+  resetPasswordSchema,
   updateProfileSchema,
 } from '@padelteammates/shared';
 import * as authService from '../services/auth.service.js';
@@ -29,6 +31,27 @@ authRouter.post(
   asyncHandler(async (req, res) => {
     const result = await authService.login(req.body);
     res.json(result);
+  }),
+);
+
+// Mot de passe oublie : on envoie un code par email. La reponse est toujours 204,
+// meme si l'adresse est inconnue, pour ne pas reveler qui possede un compte.
+authRouter.post(
+  '/forgot-password',
+  validate(forgotPasswordSchema),
+  asyncHandler(async (req, res) => {
+    await authService.requestPasswordReset(req.body.email);
+    res.status(204).send();
+  }),
+);
+
+// Verification du code et nouveau mot de passe. Toutes les sessions sont revoquees.
+authRouter.post(
+  '/reset-password',
+  validate(resetPasswordSchema),
+  asyncHandler(async (req, res) => {
+    await authService.resetPassword(req.body);
+    res.status(204).send();
   }),
 );
 
