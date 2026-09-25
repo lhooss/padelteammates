@@ -15,12 +15,13 @@ async function main() {
   const email = (process.env.ADMIN_EMAIL ?? 'admin@padelteammates.com').toLowerCase();
   const password = process.env.ADMIN_PASSWORD ?? 'ChangeMe123!';
   const name = process.env.ADMIN_NAME ?? 'Admin Kenitra';
+  const username = (process.env.ADMIN_USERNAME ?? 'admin').toLowerCase();
 
   const passwordHash = await bcrypt.hash(password, 10);
   const admin = await prisma.user.upsert({
     where: { email },
     update: { role: 'ADMIN' },
-    create: { email, name, passwordHash, role: 'ADMIN', profilePublic: true },
+    create: { email, name, username, passwordHash, role: 'ADMIN', profilePublic: true },
   });
   console.log(`Admin pret: ${admin.email}`);
 

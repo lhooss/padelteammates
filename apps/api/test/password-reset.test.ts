@@ -95,7 +95,7 @@ describe('Mot de passe oublie', () => {
   it('revoque les sessions ouvertes : l\'ancien jeton ne se renouvelle plus', async () => {
     const created = await request(app)
       .post('/api/auth/register')
-      .send({ name: 'Joueur Test', email: 'sessions@example.com', password: 'password123' })
+      .send({ name: 'Joueur Test', username: 'sessions', email: 'sessions@example.com', password: 'password123' })
       .expect(201);
     const user: TestUser = { id: created.body.user.id, email: 'sessions@example.com', token: created.body.token };
 

@@ -25,13 +25,15 @@ export interface TestUser {
 // Inscrit un joueur via l'API et renvoie {id, email, token}.
 export async function registerUser(
   app: Express,
-  overrides: Partial<{ name: string; email: string; password: string; profilePublic: boolean }> = {},
+  overrides: Partial<{ name: string; username: string; email: string; password: string; profilePublic: boolean }> = {},
 ): Promise<TestUser> {
-  const email = overrides.email ?? `user_${Math.floor(performance.now() * 1000)}@example.com`;
+  const unique = Math.floor(performance.now() * 1000);
+  const email = overrides.email ?? `user_${unique}@example.com`;
   const res = await request(app)
     .post('/api/auth/register')
     .send({
       name: overrides.name ?? 'Joueur Test',
+      username: overrides.username ?? `joueur${unique}`,
       email,
       password: overrides.password ?? 'password123',
       profilePublic: overrides.profilePublic ?? false,

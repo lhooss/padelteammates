@@ -92,7 +92,7 @@ export default function MatchPlayersScreen() {
                 <View style={styles.flex}>
                   <ThemedText numberOfLines={1}>{player.user.name}</ThemedText>
                   <ThemedText type="small" themeColor="textSecondary">
-                    Équipe {player.team}
+                    @{player.user.username} · Équipe {player.team}
                     {player.presenceStatus === 'INVITED' ? ' · invité' : ''}
                   </ThemedText>
                 </View>

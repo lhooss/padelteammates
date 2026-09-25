@@ -6,7 +6,7 @@ import { notify } from './notification.service.js';
 // Relation d'un joueur (le "viewer") avec un autre joueur.
 export type FriendshipState = 'SELF' | 'NONE' | 'FRIENDS' | 'REQUEST_SENT' | 'REQUEST_RECEIVED';
 
-const PLAYER_SELECT = { id: true, name: true } as const;
+const PLAYER_SELECT = { id: true, name: true, username: true } as const;
 
 export function friendshipState(
   viewerId: string,

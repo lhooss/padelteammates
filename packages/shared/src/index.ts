@@ -7,3 +7,4 @@ export * from './match.schema.js';
 export * from './notification.schema.js';
 export * from './score.schema.js';
 export * from './user.schema.js';
+export * from './username.js';

@@ -17,6 +17,9 @@ export function PlayerRow({ player, friendship }: { player: PlayerSummary; frien
         style={styles.name}
         onPress={() => router.push({ pathname: '/players/[id]', params: { id: player.id } })}>
         <ThemedText type="smallBold">{player.name}</ThemedText>
+        <ThemedText type="small" themeColor="textSecondary">
+          @{player.username}
+        </ThemedText>
       </Pressable>
       <View>
         <FriendAction userId={player.id} name={player.name} state={friendship} compact />

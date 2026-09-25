@@ -42,6 +42,7 @@ function EditProfileForm({ me }: { me: User }) {
   const { data: clubs } = useClubsQuery();
   const [updateMe, { isLoading, error }] = useUpdateMeMutation();
   const [name, setName] = useState(me.name);
+  const [username, setUsername] = useState(me.username);
   const [preferredSide, setPreferredSide] = useState<CourtSide | null>(me.preferredSide);
   const [level, setLevel] = useState<PlayerLevel | null>(me.level);
   const [dominantHand, setDominantHand] = useState<Hand | null>(me.dominantHand);
@@ -52,6 +53,7 @@ function EditProfileForm({ me }: { me: User }) {
   async function save() {
     const body: UpdateProfileRequest = {
       name: name.trim(),
+      username: username.trim().toLowerCase(),
       preferredSide,
       level,
       dominantHand,
@@ -78,6 +80,20 @@ function EditProfileForm({ me }: { me: User }) {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <TextField label="Nom" value={name} onChangeText={setName} autoComplete="name" error={fieldErrors.name} />
+
+          <View style={styles.section}>
+            <TextField
+              label="Identifiant"
+              value={username}
+              onChangeText={(value) => setUsername(value.toLowerCase())}
+              autoCapitalize="none"
+              autoCorrect={false}
+              error={fieldErrors.username}
+            />
+            <ThemedText type="small" themeColor="textSecondary">
+              Il vous distingue des joueurs qui portent le même nom, et permet de vous retrouver dans la recherche.
+            </ThemedText>
+          </View>
 
           <ThemedText type="small" themeColor="textSecondary">
             Profil padel, visible par tous les joueurs. Touchez un choix sélectionné pour l'effacer.

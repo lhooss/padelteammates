@@ -25,6 +25,7 @@ import type {
 const PUBLIC_USER_SELECT = {
   id: true,
   name: true,
+  username: true,
   email: true,
   role: true,
   profilePublic: true,
@@ -55,11 +56,17 @@ async function issueSession(user: { id: string; role: Role }) {
 export async function register(input: RegisterInput) {
   const existing = await prisma.user.findUnique({ where: { email: input.email } });
   if (existing) throw new ConflictError('Email deja utilise');
+  const takenUsername = await prisma.user.findUnique({
+    where: { username: input.username },
+    select: { id: true },
+  });
+  if (takenUsername) throw new ConflictError('Identifiant deja pris');
 
   const passwordHash = await hashPassword(input.password);
   const user = await prisma.user.create({
     data: {
       name: input.name,
+      username: input.username,
       email: input.email,
       passwordHash,
       profilePublic: input.profilePublic,
@@ -180,6 +187,10 @@ export async function updateProfile(userId: string, input: UpdateProfileInput) {
   if (input.homeClubId) {
     const club = await prisma.club.findUnique({ where: { id: input.homeClubId }, select: { id: true } });
     if (!club) throw new NotFoundError('Club introuvable');
+  }
+  if (input.username) {
+    const taken = await prisma.user.findUnique({ where: { username: input.username }, select: { id: true } });
+    if (taken && taken.id !== userId) throw new ConflictError('Identifiant deja pris');
   }
   return prisma.user.update({
     where: { id: userId },

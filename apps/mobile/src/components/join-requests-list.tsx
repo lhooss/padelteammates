@@ -41,7 +41,7 @@ export function JoinRequestsList({ match, meId }: { match: Match; meId: string }
               {request.user.name}
             </ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
-              Équipe {request.team}
+              @{request.user.username} · Équipe {request.team}
               {spots[request.team] === 0 ? ' (complète)' : ''}
             </ThemedText>
           </Pressable>

@@ -7,7 +7,7 @@ import { friendIds } from './friendship.service.js';
 import { notify, notifyMany } from './notification.service.js';
 import type { AddInvitesInput, CreateMatchInput } from '@padelteammates/shared';
 
-const PLAYER_SELECT = { id: true, name: true } as const;
+const PLAYER_SELECT = { id: true, name: true, username: true } as const;
 
 const MATCH_INCLUDE = {
   club: true,

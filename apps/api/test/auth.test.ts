@@ -12,7 +12,7 @@ describe('Auth', () => {
   it('inscrit un joueur et renvoie un token', async () => {
     const res = await request(app)
       .post('/api/auth/register')
-      .send({ name: 'Youssef', email: 'y@example.com', password: 'password123' })
+      .send({ name: 'Youssef', username: 'youssef', email: 'y@example.com', password: 'password123' })
       .expect(201);
     expect(res.body.token).toBeTypeOf('string');
     expect(res.body.user.email).toBe('y@example.com');
@@ -21,9 +21,10 @@ describe('Auth', () => {
 
   it('refuse un email en double (409)', async () => {
     await registerUser(app, { email: 'dup@example.com' });
+    // Identifiant different : c'est bien l'email en double que l'on teste ici.
     await request(app)
       .post('/api/auth/register')
-      .send({ name: 'Xavier', email: 'dup@example.com', password: 'password123' })
+      .send({ name: 'Xavier', username: 'xavier', email: 'dup@example.com', password: 'password123' })
       .expect(409);
   });
 
@@ -59,7 +60,7 @@ describe('Auth — session longue (renouvellement silencieux)', () => {
   function createAccount(email: string) {
     return request(app)
       .post('/api/auth/register')
-      .send({ name: 'Joueur Test', email, password: 'password123' })
+      .send({ name: 'Joueur Test', username: email.split('@')[0], email, password: 'password123' })
       .expect(201);
   }
 
@@ -95,5 +96,51 @@ describe('Auth — session longue (renouvellement silencieux)', () => {
       .post('/api/auth/refresh')
       .send({ refreshToken: 'x'.repeat(43) })
       .expect(401);
+  });
+});
+
+describe('Identifiant unique', () => {
+  it('refuse un identifiant deja pris (409), meme avec un autre email', async () => {
+    await registerUser(app, { username: 'jean-luc', email: 'jl1@example.com' });
+    await request(app)
+      .post('/api/auth/register')
+      .send({ name: 'Jean-Luc', username: 'jean-luc', email: 'jl2@example.com', password: 'password123' })
+      .expect(409);
+  });
+
+  it('refuse un identifiant mal forme (400)', async () => {
+    await request(app)
+      .post('/api/auth/register')
+      .send({ name: 'Jean-Luc', username: 'Jean Luc!', email: 'jl3@example.com', password: 'password123' })
+      .expect(400);
+  });
+
+  it('propose une variante libre quand l\'identifiant est pris', async () => {
+    await registerUser(app, { username: 'jean-luc', email: 'jl1@example.com' });
+
+    // Route publique : interrogee pendant l'inscription, donc sans jeton.
+    const libre = await request(app).get('/api/auth/username?username=amine').expect(200);
+    expect(libre.body).toEqual({ available: true, suggestion: 'amine' });
+
+    const pris = await request(app).get('/api/auth/username?username=jean-luc').expect(200);
+    expect(pris.body).toEqual({ available: false, suggestion: 'jean-luc2' });
+  });
+
+  it('deux homonymes se distinguent par leur identifiant dans la recherche', async () => {
+    const me = await registerUser(app, { name: 'Amine', username: 'amine', email: 'me2@example.com' });
+    await registerUser(app, { name: 'Jean-Luc', username: 'jean-luc', email: 'jl1@example.com' });
+    const second = await registerUser(app, { name: 'Jean-Luc', username: 'jean-luc2', email: 'jl2@example.com' });
+
+    // Le nom seul ne permet pas de choisir : les deux repondent.
+    const parNom = await request(app).get('/api/users/search?q=jean').set('Authorization', auth(me.token)).expect(200);
+    expect(parNom.body.map((p: { username: string }) => p.username).sort()).toEqual(['jean-luc', 'jean-luc2']);
+
+    // L'identifiant, lui, designe un joueur et un seul.
+    const parIdentifiant = await request(app)
+      .get('/api/users/search?q=jean-luc2')
+      .set('Authorization', auth(me.token))
+      .expect(200);
+    expect(parIdentifiant.body).toHaveLength(1);
+    expect(parIdentifiant.body[0].id).toBe(second.id);
   });
 });

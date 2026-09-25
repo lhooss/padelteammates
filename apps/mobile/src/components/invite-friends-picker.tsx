@@ -51,9 +51,14 @@ export function InviteFriendsPicker({
     <View style={styles.list}>
       {friends.map((friend) => (
         <View key={friend.id} style={styles.row}>
-          <ThemedText type="small" style={styles.name}>
-            {friend.name}
-          </ThemedText>
+          {/* L'identifiant est affiche ici aussi : sans lui, deux amis du meme
+              nom sont impossibles a departager au moment d'inviter. */}
+          <View style={styles.name}>
+            <ThemedText type="small">{friend.name}</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              @{friend.username}
+            </ThemedText>
+          </View>
           {(['partner', 'opponent'] as const)
             .filter((role) => capacity[role] > 0)
             .map((role) => (

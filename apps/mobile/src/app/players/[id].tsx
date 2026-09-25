@@ -38,6 +38,9 @@ export default function PlayerScreen() {
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.identity}>
             <ThemedText type="subtitle">{player.name}</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              @{player.username}
+            </ThemedText>
             <ThemedText themeColor="textSecondary">
               {[player.profilePublic ? 'Profil public' : 'Profil privé', RELATION_LABEL[player.friendship]]
                 .filter(Boolean)

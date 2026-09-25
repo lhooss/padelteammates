@@ -39,8 +39,8 @@ function requestsOf(user: TestUser) {
 
 describe('Amis — demandes, acceptation, retrait', () => {
   it('une demande acceptee rend les deux joueurs amis', async () => {
-    const a = await registerUser(app, { name: 'Alice', email: 'a@example.com' });
-    const b = await registerUser(app, { name: 'Bruno', email: 'b@example.com' });
+    const a = await registerUser(app, { name: 'Alice', username: 'alice', email: 'a@example.com' });
+    const b = await registerUser(app, { name: 'Bruno', username: 'bruno', email: 'b@example.com' });
 
     expect((await sendRequest(a, b).expect(201)).body.state).toBe('REQUEST_SENT');
     expect((await profile(a, b).expect(200)).body.friendship).toBe('REQUEST_SENT');
@@ -52,8 +52,8 @@ describe('Amis — demandes, acceptation, retrait', () => {
 
     await request(app).post(`/api/friends/${a.id}/accept`).set('Authorization', auth(b.token)).expect(200);
 
-    expect((await friendsOf(a).expect(200)).body).toEqual([{ id: b.id, name: 'Bruno' }]);
-    expect((await friendsOf(b).expect(200)).body).toEqual([{ id: a.id, name: 'Alice' }]);
+    expect((await friendsOf(a).expect(200)).body).toEqual([{ id: b.id, name: 'Bruno', username: 'bruno' }]);
+    expect((await friendsOf(b).expect(200)).body).toEqual([{ id: a.id, name: 'Alice', username: 'alice' }]);
     expect((await profile(a, b)).body.friendship).toBe('FRIENDS');
   });
 
@@ -106,16 +106,18 @@ describe('Amis — demandes, acceptation, retrait', () => {
 
 describe('Joueurs — recherche et profil', () => {
   it('recherche par nom (insensible a la casse), sans soi-meme, avec la relation', async () => {
-    const me = await registerUser(app, { name: 'Youssef Alaoui', email: 'me@example.com' });
-    const friend = await registerUser(app, { name: 'Yousra Chraibi', email: 'yousra@example.com' });
-    const other = await registerUser(app, { name: 'Youness Bennani', email: 'youness@example.com' });
-    await registerUser(app, { name: 'Karim Tazi', email: 'karim@example.com' });
+    const me = await registerUser(app, { name: 'Youssef Alaoui', username: 'youssef', email: 'me@example.com' });
+    const friend = await registerUser(app, { name: 'Yousra Chraibi', username: 'yousra', email: 'yousra@example.com' });
+    const other = await registerUser(app, { name: 'Youness Bennani', username: 'youness', email: 'youness@example.com' });
+    // "karim" ne contient pas "you" : la recherche ci-dessous, qui porte aussi
+    // sur l'identifiant, doit toujours ne ramener que deux joueurs.
+    await registerUser(app, { name: 'Karim Tazi', username: 'karim', email: 'karim@example.com' });
     await makeFriends(app, me, friend);
 
     const res = await request(app).get('/api/users/search?q=yOu').set('Authorization', auth(me.token)).expect(200);
     expect(res.body).toEqual([
-      { id: other.id, name: 'Youness Bennani', friendship: 'NONE' },
-      { id: friend.id, name: 'Yousra Chraibi', friendship: 'FRIENDS' },
+      { id: other.id, name: 'Youness Bennani', username: 'youness', friendship: 'NONE' },
+      { id: friend.id, name: 'Yousra Chraibi', username: 'yousra', friendship: 'FRIENDS' },
     ]);
 
     await request(app).get('/api/users/search?q=y').set('Authorization', auth(me.token)).expect(400);

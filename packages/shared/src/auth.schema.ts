@@ -1,6 +1,20 @@
 import { z } from 'zod';
 
+import { USERNAME_MAX, USERNAME_MIN } from './username.js';
+
 const nameSchema = z.string().min(2, 'Le nom doit faire au moins 2 caracteres').max(80, 'Le nom est trop long');
+// Identifiant public unique : ce qui distingue deux joueurs du meme nom. Pas
+// d'espace ni d'accent, pour qu'il se tape et se dise sans ambiguite.
+const usernameSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .min(USERNAME_MIN, `L'identifiant doit faire au moins ${USERNAME_MIN} caracteres`)
+  .max(USERNAME_MAX, "L'identifiant est trop long")
+  .regex(
+    /^[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$/,
+    'Lettres, chiffres, tiret et tiret bas uniquement (sans tiret au debut ni a la fin)',
+  );
 const emailSchema = z.string().email('Email invalide').toLowerCase();
 const passwordSchema = z
   .string()
@@ -9,9 +23,16 @@ const passwordSchema = z
 
 export const registerSchema = z.object({
   name: nameSchema,
+  username: usernameSchema,
   email: emailSchema,
   password: passwordSchema,
   profilePublic: z.boolean().optional().default(false),
+});
+
+// Disponibilite d'un identifiant, interrogee pendant la saisie a l'inscription :
+// le joueur l'apprend en tapant, pas au moment de valider.
+export const usernameCheckSchema = z.object({
+  username: usernameSchema,
 });
 
 export const loginSchema = z.object({
@@ -69,6 +90,7 @@ const phoneSchema = z
 export const updateProfileSchema = z
   .object({
     name: nameSchema.optional(),
+    username: usernameSchema.optional(),
     profilePublic: z.boolean().optional(),
     preferredSide: z.enum(COURT_SIDES).nullable().optional(),
     level: z.enum(PLAYER_LEVELS).nullable().optional(),
@@ -93,6 +115,7 @@ export const changePasswordSchema = z.object({
 export type RegisterInput = z.infer<typeof registerSchema>;
 // Corps de requete accepte (avant application des valeurs par defaut), cote client.
 export type RegisterRequest = z.input<typeof registerSchema>;
+export type UsernameCheckInput = z.infer<typeof usernameCheckSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;

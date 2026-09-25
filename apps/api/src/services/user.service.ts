@@ -1,3 +1,4 @@
+import { suggestUsername } from '@padelteammates/shared';
 import { prisma } from '../config/prisma.js';
 import { ForbiddenError, NotFoundError } from '../utils/errors.js';
 import { findFriendship, friendshipState, friendshipsWith } from './friendship.service.js';
@@ -20,6 +21,7 @@ function statsOf(user: { wins: number; losses: number }) {
 const PROFILE_SELECT = {
   id: true,
   name: true,
+  username: true,
   profilePublic: true,
   wins: true,
   losses: true,
@@ -36,7 +38,7 @@ export async function getPublicStats(viewerId: string, userId: string) {
   if (!profile.stats) {
     throw new ForbiddenError('Le profil de ce joueur est prive');
   }
-  return { id: profile.id, name: profile.name, ...profile.stats };
+  return { id: profile.id, name: profile.name, username: profile.username, ...profile.stats };
 }
 
 // Profil d'un joueur vu par `viewerId` : profil padel (visible de tous), relation d'amitie,
@@ -53,6 +55,7 @@ export async function getProfile(viewerId: string, userId: string) {
   return {
     id: user.id,
     name: user.name,
+    username: user.username,
     profilePublic: user.profilePublic,
     friendship: state,
     preferredSide: user.preferredSide,
@@ -66,11 +69,19 @@ export async function getProfile(viewerId: string, userId: string) {
   };
 }
 
-// Recherche de joueurs par nom (insensible a la casse), avec la relation d'amitie.
+// Recherche de joueurs par nom ou par identifiant (insensible a la casse), avec
+// la relation d'amitie. L'identifiant est cherche lui aussi : c'est le seul moyen
+// de trouver a coup sur un joueur dont plusieurs homonymes partagent le nom.
 export async function searchUsers(viewerId: string, query: string) {
   const users = await prisma.user.findMany({
-    where: { id: { not: viewerId }, name: { contains: query, mode: 'insensitive' } },
-    select: { id: true, name: true },
+    where: {
+      id: { not: viewerId },
+      OR: [
+        { name: { contains: query, mode: 'insensitive' } },
+        { username: { contains: query, mode: 'insensitive' } },
+      ],
+    },
+    select: { id: true, name: true, username: true },
     orderBy: { name: 'asc' },
     take: 20,
   });
@@ -85,9 +96,21 @@ export async function searchUsers(viewerId: string, query: string) {
 export async function leaderboard() {
   const users = await prisma.user.findMany({
     where: { profilePublic: true },
-    select: { id: true, name: true, wins: true, losses: true },
+    select: { id: true, name: true, username: true, wins: true, losses: true },
     orderBy: [{ wins: 'desc' }],
     take: 100,
   });
-  return users.map((u) => ({ id: u.id, name: u.name, ...statsOf(u) }));
+  return users.map((u) => ({ id: u.id, name: u.name, username: u.username, ...statsOf(u) }));
+}
+
+// Disponibilite d'un identifiant, pour le dire au joueur pendant qu'il saisit
+// plutot qu'au moment de valider. Quand il est pris, on propose la premiere
+// variante libre : l'inscription n'echoue donc jamais faute d'idee.
+export async function checkUsername(username: string) {
+  const similar = await prisma.user.findMany({
+    where: { username: { startsWith: username } },
+    select: { username: true },
+  });
+  const taken = new Set(similar.map((u) => u.username));
+  return { available: !taken.has(username), suggestion: suggestUsername(username, taken) };
 }

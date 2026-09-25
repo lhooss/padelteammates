@@ -114,6 +114,11 @@ export const api = createApi({
     register: build.mutation<AuthResponse, RegisterRequest>({
       query: (body) => ({ url: '/auth/register', method: 'POST', body }),
     }),
+    // Disponibilite d'un identifiant pendant l'inscription : appelee avant
+    // d'avoir un compte, donc sans jeton. `suggestion` est toujours libre.
+    checkUsername: build.query<{ available: boolean; suggestion: string }, string>({
+      query: (username) => ({ url: '/auth/username', params: { username } }),
+    }),
     // Mot de passe oublie : un code est envoye par email. La reponse est la meme
     // que l'adresse existe ou non, pour ne rien reveler.
     forgotPassword: build.mutation<void, string>({
@@ -340,6 +345,7 @@ export const api = createApi({
 export const {
   useLoginMutation,
   useRegisterMutation,
+  useCheckUsernameQuery,
   useLogoutMutation,
   useForgotPasswordMutation,
   useResetPasswordMutation,

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { validate } from '../middleware/validate.js';
+import { getValidated, validate } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/auth.js';
 import {
   changeEmailSchema,
@@ -11,8 +11,11 @@ import {
   registerSchema,
   resetPasswordSchema,
   updateProfileSchema,
+  usernameCheckSchema,
+  type UsernameCheckInput,
 } from '@padelteammates/shared';
 import * as authService from '../services/auth.service.js';
+import * as userService from '../services/user.service.js';
 
 export const authRouter = Router();
 
@@ -22,6 +25,18 @@ authRouter.post(
   asyncHandler(async (req, res) => {
     const result = await authService.register(req.body);
     res.status(201).json(result);
+  }),
+);
+
+// Disponibilite d'un identifiant. Publique comme /register : elle sert pendant
+// l'inscription, quand le joueur n'a pas encore de compte. Renvoie toujours une
+// proposition libre, pour que l'inscription n'echoue jamais faute d'idee.
+authRouter.get(
+  '/username',
+  validate(usernameCheckSchema, 'query'),
+  asyncHandler(async (req, res) => {
+    const { username } = getValidated<UsernameCheckInput>(req, 'query');
+    res.json(await userService.checkUsername(username));
   }),
 );
 

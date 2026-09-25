@@ -31,6 +31,7 @@ export interface FrmtSummary {
 export interface User extends PadelProfile {
   id: string;
   name: string;
+  username: string; // identifiant public, unique
   email: string;
   role: 'USER' | 'ADMIN';
   profilePublic: boolean;
@@ -60,7 +61,7 @@ export interface Participant {
   matchId: string;
   team: Team;
   presenceStatus: PresenceStatus;
-  user: { id: string; name: string };
+  user: { id: string; name: string; username: string };
 }
 
 export interface SetScore {
@@ -96,6 +97,7 @@ export type FriendshipState = 'SELF' | 'NONE' | 'FRIENDS' | 'REQUEST_SENT' | 'RE
 export interface PlayerSummary {
   id: string;
   name: string;
+  username: string; // distingue deux joueurs du meme nom
 }
 
 export interface PlayerSearchResult extends PlayerSummary {
@@ -223,6 +225,6 @@ export interface FrmtPendingLink {
   fullName: string;
   birthYear: number | null;
   createdAt: string;
-  user: { id: string; name: string; email: string };
+  user: { id: string; name: string; username: string; email: string };
   entry: FrmtRankingEntry | null;
 }

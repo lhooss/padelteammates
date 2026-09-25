@@ -124,7 +124,7 @@ export async function unlinkMyRanking(userId: string): Promise<void> {
 export async function listPendingLinks() {
   const links = await prisma.frmtLink.findMany({
     where: { status: 'PENDING' },
-    include: { user: { select: { id: true, name: true, email: true } } },
+    include: { user: { select: { id: true, name: true, username: true, email: true } } },
     orderBy: { createdAt: 'asc' },
   });
   return Promise.all(
