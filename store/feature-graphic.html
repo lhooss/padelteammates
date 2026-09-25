@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Bannière Play Store</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@800;900&family=Instrument+Sans:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Bannière Google Play : 1024x500 exactement. Reprend l'identité de l'app —
+     bleu du terrain, jaune de la balle, lignes de jeu — pour qu'un joueur
+     reconnaisse l'application avant même de lire le texte. */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { width: 1024px; height: 500px; overflow: hidden; }
+  .banner {
+    position: relative; width: 1024px; height: 500px; background: #1F4FA0;
+    display: flex; align-items: center; padding: 0 64px; overflow: hidden;
+  }
+  /* Lignes du terrain, discrètes : elles structurent sans distraire. */
+  .lines i { position: absolute; border-color: rgba(255,255,255,.16); }
+  .l-out   { top: -2px; left: 40px; right: 40px; bottom: 44px; border-left: 3px solid; border-right: 3px solid; }
+  .l-serve { left: 40px; right: 40px; bottom: 170px; border-top: 3px solid; }
+  .l-mid   { left: 50%; bottom: 44px; height: 126px; border-left: 3px solid; }
+  .l-net   { left: 0; right: 0; bottom: 42px; border-top: 5px solid rgba(255,255,255,.5); }
+
+  .text { position: relative; z-index: 2; max-width: 620px; }
+  .wordmark {
+    font-family: "Big Shoulders Display", sans-serif; font-weight: 900;
+    font-size: 104px; line-height: .86; color: #fff; text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .tagline {
+    font-family: "Instrument Sans", sans-serif; font-weight: 600;
+    font-size: 27px; color: rgba(255,255,255,.88); margin-top: 22px; line-height: 1.35;
+  }
+  .ball {
+    position: absolute; right: 118px; top: 96px; width: 128px; height: 128px;
+    border-radius: 50%; background: #DAF03C; z-index: 1;
+  }
+  /* Couture de la balle : un seul trait, suffisant pour la rendre lisible. */
+  .ball::after {
+    content: ''; position: absolute; left: 14px; right: 14px; top: 50%;
+    height: 3px; background: rgba(31,79,160,.35); transform: translateY(-50%) rotate(-18deg);
+  }
+  .clubs {
+    position: absolute; right: 64px; bottom: 54px; z-index: 2; text-align: right;
+    font-family: "Instrument Sans", sans-serif; font-weight: 500;
+    font-size: 17px; color: rgba(255,255,255,.62); line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+  <div class="banner">
+    <div class="lines">
+      <i class="l-out"></i><i class="l-serve"></i><i class="l-mid"></i><i class="l-net"></i>
+    </div>
+    <span class="ball"></span>
+    <div class="text">
+      <div class="wordmark">Padel<br>teammates</div>
+      <div class="tagline">Vos matchs de padel à Kénitra.<br>Trouvez un quatrième, gardez le score.</div>
+    </div>
+    <div class="clubs">Lyautey Social Club · CMK<br>Elite Padel Club Kenitra</div>
+  </div>
+</body>
+</html>
