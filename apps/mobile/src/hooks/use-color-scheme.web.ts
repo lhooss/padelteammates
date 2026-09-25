@@ -1,21 +1,22 @@
-import { useEffect, useState } from 'react';
-import { useColorScheme as useRNColorScheme } from 'react-native';
+import { useSyncExternalStore } from 'react';
+import { useColorScheme as useRNColorScheme, type ColorSchemeName } from 'react-native';
 
-/**
- * To support static rendering, this value needs to be re-calculated on the client side for web
- */
-export function useColorScheme() {
-  const [hasHydrated, setHasHydrated] = useState(false);
+// Rendu statique (web) : le serveur ignore le theme du visiteur. On renvoie
+// donc "light" jusqu'a l'hydratation, puis le theme reel.
+//
+// useSyncExternalStore fait exactement cette distinction serveur / client, la
+// ou un setState dans un effet obtenait le meme resultat au prix d'un rendu en
+// cascade a chaque montage.
+//
+// Le theme n'a pas de source externe a ecouter : React Native le suit deja via
+// useColorScheme. L'abonnement ne fait donc rien.
+const subscribe = () => () => {};
 
-  useEffect(() => {
-    setHasHydrated(true);
-  }, []);
-
+export function useColorScheme(): ColorSchemeName {
   const colorScheme = useRNColorScheme();
-
-  if (hasHydrated) {
-    return colorScheme;
-  }
-
-  return 'light';
+  return useSyncExternalStore<ColorSchemeName>(
+    subscribe,
+    () => colorScheme,
+    () => 'light',
+  );
 }
