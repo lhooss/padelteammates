@@ -7,9 +7,9 @@ import { Button } from '@/components/button';
 import { Chip } from '@/components/chip';
 import { JoinMatchActions } from '@/components/join-match-actions';
 import { MatchCard } from '@/components/match-card';
-import { NotificationBell } from '@/components/notification-bell';
 import { QueryState } from '@/components/query-state';
 import { Screen } from '@/components/screen';
+import { headerActionStyle, ScreenHeader } from '@/components/screen-header';
 import { ThemedText } from '@/components/themed-text';
 import { BottomTabInset, FontFamily, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -29,14 +29,9 @@ export default function CalendarScreen() {
   const { data: clubs } = useClubsQuery();
 
   const header = (
-    <View style={styles.header}>
-      <View style={styles.titleRow}>
-        <ThemedText type="subtitle" style={styles.title}>
-          Calendrier
-        </ThemedText>
-        <Button title="Planifier" style={styles.planButton} onPress={() => router.push('/match/new')} />
-        <NotificationBell />
-      </View>
+    <ScreenHeader
+      title="Calendrier"
+      action={<Button title="Planifier" style={headerActionStyle} onPress={() => router.push('/match/new')} />}>
       <View style={styles.weekSwitcher}>
         <WeekArrow label="‹" hint="Semaine précédente" onPress={() => setMonday(addDays(monday, -7))} />
         <Text style={[styles.weekLabel, { color: theme.text }]}>{formatWeek(monday)}</Text>
@@ -48,7 +43,7 @@ export default function CalendarScreen() {
           <Chip key={club.id} label={club.name} selected={clubId === club.id} onPress={() => setClubId(club.id)} />
         ))}
       </ScrollView>
-    </View>
+    </ScreenHeader>
   );
 
   if (!data) {
@@ -62,10 +57,10 @@ export default function CalendarScreen() {
 
   return (
     <Screen>
+      {header}
       <SectionList
         sections={groupByDay(data)}
         keyExtractor={(match) => match.id}
-        ListHeaderComponent={header}
         renderSectionHeader={({ section }) => (
           <ThemedText type="eyebrow" themeColor="textSecondary" style={styles.dayTitle}>
             {section.title}
@@ -123,23 +118,6 @@ const styles = StyleSheet.create({
   list: {
     paddingHorizontal: Spacing.three,
     paddingBottom: BottomTabInset + Spacing.three,
-  },
-  header: {
-    gap: Spacing.three,
-    paddingTop: Spacing.three,
-    paddingBottom: Spacing.two,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-  },
-  title: {
-    flex: 1,
-  },
-  planButton: {
-    minHeight: 44,
-    paddingHorizontal: Spacing.three,
   },
   weekSwitcher: {
     flexDirection: 'row',

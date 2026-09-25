@@ -8,14 +8,21 @@ import { CourtBooking } from '@/components/court-booking';
 import { JoinRequestsList } from '@/components/join-requests-list';
 import { MatchActions } from '@/components/match-actions';
 import { MatchCard } from '@/components/match-card';
-import { NotificationBell } from '@/components/notification-bell';
 import { QueryState } from '@/components/query-state';
 import { ScoreActions } from '@/components/score-actions';
 import { Screen } from '@/components/screen';
+import { headerActionStyle, ScreenHeader } from '@/components/screen-header';
 import { ThemedText } from '@/components/themed-text';
 import { BottomTabInset, Spacing } from '@/constants/theme';
 import { errorMessage } from '@/lib/api-error';
-import { canManagePlayers, hasFreeSpot, isParticipant, isPendingInvitation, needsMyAction } from '@/lib/matches';
+import {
+  canManagePlayers,
+  hasFreeSpot,
+  isAbandoned,
+  isParticipant,
+  isPendingInvitation,
+  needsMyAction,
+} from '@/lib/matches';
 import { useMeQuery, useMyMatchesQuery, useRespondInviteMutation } from '@/store/api';
 
 // Mes matchs : invitations, actions a traiter (scores, demandes pour rejoindre),
@@ -34,13 +41,10 @@ export default function MyMatchesScreen() {
   }
 
   const header = (
-    <View style={styles.header}>
-      <ThemedText type="subtitle" style={styles.title}>
-        Mes matchs
-      </ThemedText>
-      <Button title="Planifier" style={styles.planButton} onPress={() => router.push('/match/new')} />
-      <NotificationBell />
-    </View>
+    <ScreenHeader
+      title="Mes matchs"
+      action={<Button title="Planifier" style={headerActionStyle} onPress={() => router.push('/match/new')} />}
+    />
   );
 
   if (!data || !me) {
@@ -62,17 +66,22 @@ export default function MyMatchesScreen() {
     { title: 'Mes demandes pour rejoindre', data: data.filter((m) => !isParticipant(m, me.id)) },
     {
       title: 'À venir',
-      data: playing.filter((m) => m.status !== 'COMPLETED' && !isInvited(m) && !toHandle(m)),
+      data: playing.filter(
+        (m) => m.status !== 'COMPLETED' && !isInvited(m) && !toHandle(m) && !isAbandoned(m, me.id),
+      ),
     },
     { title: 'Terminés', data: playing.filter((m) => m.status === 'COMPLETED') },
+    // Creneau passe sans resultat : le match n'aura pas lieu, mais on le garde
+    // visible plutot que de le faire disparaitre sans explication.
+    { title: 'Sans suite', data: playing.filter((m) => isAbandoned(m, me.id)) },
   ].filter((s) => s.data.length > 0);
 
   return (
     <Screen>
+      {header}
       <SectionList
         sections={sections}
         keyExtractor={(match) => match.id}
-        ListHeaderComponent={header}
         renderSectionHeader={({ section }) => (
           <ThemedText type="eyebrow" themeColor="textSecondary" style={styles.sectionTitle}>
             {section.title}
@@ -131,21 +140,6 @@ const styles = StyleSheet.create({
   list: {
     paddingHorizontal: Spacing.three,
     paddingBottom: BottomTabInset + Spacing.three,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingTop: Spacing.three,
-    paddingBottom: Spacing.two,
-  },
-  title: {
-    flex: 1,
-  },
-  planButton: {
-    minHeight: 40,
-    paddingHorizontal: Spacing.three,
   },
   sectionTitle: {
     marginTop: Spacing.three,

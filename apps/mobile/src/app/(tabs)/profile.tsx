@@ -7,6 +7,7 @@ import { FrmtCard } from '@/components/frmt-card';
 import { InfoRows } from '@/components/info-rows';
 import { QueryState } from '@/components/query-state';
 import { Screen } from '@/components/screen';
+import { ScreenHeader } from '@/components/screen-header';
 import { StatTiles } from '@/components/stat-tiles';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -79,12 +80,8 @@ export default function ProfileScreen() {
 
   return (
     <Screen>
+      <ScreenHeader title={me.name} subtitle={me.email} />
       <ScrollView contentContainerStyle={styles.content}>
-        <View>
-          <ThemedText type="subtitle">{me.name}</ThemedText>
-          <ThemedText themeColor="textSecondary">{me.email}</ThemedText>
-        </View>
-
         <StatTiles wins={me.wins} losses={me.losses} />
 
         <View style={styles.section}>

@@ -120,6 +120,17 @@ export function scoreAction(match: Match, meId: string, now = new Date()): Score
 
 // Le match attend une action de ma part : repondre a une invitation, saisir ou valider
 // le score, ou (organisateur) traiter une demande pour rejoindre.
+// Match reste en plan : le creneau est passe, personne n'a saisi de resultat, et
+// il n'y a rien a y faire. Sans cela il figurait indefiniment dans "A venir".
+export function isAbandoned(match: Match, meId: string, now = new Date()): boolean {
+  return (
+    match.status === 'PLANNED' &&
+    hasSlotEnded(match, now) &&
+    !isPendingInvitation(match, meId) &&
+    scoreAction(match, meId, now) === null
+  );
+}
+
 export function needsMyAction(match: Match, meId: string): boolean {
   const action = scoreAction(match, meId);
   return (

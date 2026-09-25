@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { ActivityIndicator, FlatList, SectionList, StyleSheet, View } from 'react-native';
 
 import type { FriendshipState, PlayerSummary } from '@/api/types';
-import { NotificationBell } from '@/components/notification-bell';
 import { PlayerRow } from '@/components/player-row';
 import { Screen } from '@/components/screen';
+import { ScreenHeader } from '@/components/screen-header';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { BottomTabInset, Spacing } from '@/constants/theme';
@@ -43,13 +43,7 @@ export default function FriendsScreen() {
   return (
     <Screen>
       {/* Hors de la liste : le champ garde le focus quand on passe a l'affichage des resultats. */}
-      <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <ThemedText type="subtitle" style={styles.title}>
-            Amis
-          </ThemedText>
-          <NotificationBell />
-        </View>
+      <ScreenHeader title="Amis">
         <TextField
           label="Rechercher un joueur"
           placeholder="Nom (2 lettres minimum)"
@@ -59,7 +53,7 @@ export default function FriendsScreen() {
           returnKeyType="search"
           clearButtonMode="while-editing"
         />
-      </View>
+      </ScreenHeader>
 
       {searching ? (
         <FlatList
@@ -115,19 +109,6 @@ export default function FriendsScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    gap: Spacing.three,
-    paddingHorizontal: Spacing.three,
-    paddingTop: Spacing.three,
-    paddingBottom: Spacing.two,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  title: {
-    flex: 1,
-  },
   list: {
     paddingHorizontal: Spacing.three,
     paddingBottom: BottomTabInset + Spacing.three,
