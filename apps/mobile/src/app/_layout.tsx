@@ -133,6 +133,10 @@ function RootNavigator({ fontsLoaded }: { fontsLoaded: boolean }) {
             options={{ headerShown: true, title: 'Modifier le profil', presentation: 'modal' }}
           />
           <Stack.Screen
+            name="verify-email"
+            options={{ headerShown: true, title: 'Vérifier mon adresse', presentation: 'modal' }}
+          />
+          <Stack.Screen
             name="account/security"
             options={{ headerShown: true, title: 'Email et mot de passe', presentation: 'modal' }}
           />

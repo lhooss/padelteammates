@@ -62,6 +62,17 @@ export const resetPasswordSchema = z.object({
   newPassword: passwordSchema,
 });
 
+// --- Verification de l'adresse email ---
+
+// Code a 6 chiffres envoye a l'inscription. Rien n'est bloque tant qu'il n'est
+// pas saisi : l'app le rappelle, sans empecher de jouer.
+export const verifyEmailSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, 'Le code comporte 6 chiffres'),
+});
+
 // --- Profil padel ---
 
 export const COURT_SIDES = ['LEFT', 'RIGHT', 'BOTH'] as const; // cote prefere sur le terrain
@@ -120,6 +131,7 @@ export type LoginInput = z.infer<typeof loginSchema>;
 export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 export type UpdateProfileRequest = z.input<typeof updateProfileSchema>;
 export type ChangeEmailInput = z.infer<typeof changeEmailSchema>;

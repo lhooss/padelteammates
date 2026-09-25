@@ -147,6 +147,15 @@ export const api = createApi({
     changePassword: build.mutation<void, ChangePasswordInput>({
       query: (body) => ({ url: '/auth/me/password', method: 'PATCH', body }),
     }),
+    // Verification de l'adresse : rien n'est bloque tant qu'elle n'est pas
+    // faite. Le profil renvoye fait disparaitre le rappel sans recharger.
+    verifyEmail: build.mutation<User, string>({
+      query: (code) => ({ url: '/auth/verify-email', method: 'POST', body: { code } }),
+      invalidatesTags: ['Me'],
+    }),
+    sendEmailVerification: build.mutation<void, void>({
+      query: () => ({ url: '/auth/verify-email/send', method: 'POST' }),
+    }),
 
     clubs: build.query<Club[], void>({
       query: () => '/clubs',
@@ -353,6 +362,8 @@ export const {
   useUpdateMeMutation,
   useChangeEmailMutation,
   useChangePasswordMutation,
+  useVerifyEmailMutation,
+  useSendEmailVerificationMutation,
   useClubsQuery,
   useAllClubsQuery,
   useCreateClubMutation,

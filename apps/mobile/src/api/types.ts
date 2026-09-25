@@ -33,6 +33,7 @@ export interface User extends PadelProfile {
   name: string;
   username: string; // identifiant public, unique
   email: string;
+  emailVerifiedAt: string | null; // null : adresse pas encore confirmee
   role: 'USER' | 'ADMIN';
   profilePublic: boolean;
   wins: number;

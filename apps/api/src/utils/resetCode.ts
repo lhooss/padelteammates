@@ -5,7 +5,12 @@ import { createHash, randomInt } from 'node:crypto';
 export const RESET_CODE_TTL_MINUTES = 15;
 // Au-dela, la demande est brulee : six chiffres se devineraient sinon.
 export const RESET_MAX_ATTEMPTS = 5;
+// Verification d'adresse : meme mecanique, duree un peu plus longue. Rien n'est
+// bloque en attendant, le joueur peut relever sa boite plus tard sans gene.
+export const EMAIL_VERIFICATION_TTL_MINUTES = 30;
 
+// Les deux parcours qui envoient un code a 6 chiffres -- mot de passe oublie et
+// verification d'adresse -- partagent ce generateur.
 // Code a 6 chiffres, tire avec un generateur cryptographique (pas Math.random).
 export function createResetCode(): { code: string; hash: string } {
   const code = String(randomInt(0, 1_000_000)).padStart(6, '0');

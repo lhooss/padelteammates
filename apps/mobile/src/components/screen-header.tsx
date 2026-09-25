@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { EmailVerificationNotice } from '@/components/email-verification-notice';
 import { NotificationBell } from '@/components/notification-bell';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
@@ -37,6 +38,7 @@ export function ScreenHeader({
         {action}
         <NotificationBell />
       </View>
+      <EmailVerificationNotice />
       {children}
     </View>
   );

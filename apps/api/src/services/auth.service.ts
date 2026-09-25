@@ -6,11 +6,12 @@ import { signToken } from '../utils/jwt.js';
 import { createRefreshToken, hashRefreshToken } from '../utils/refreshToken.js';
 import {
   createResetCode,
+  EMAIL_VERIFICATION_TTL_MINUTES,
   hashResetCode,
   RESET_CODE_TTL_MINUTES,
   RESET_MAX_ATTEMPTS,
 } from '../utils/resetCode.js';
-import { passwordResetEmail, sendEmail } from './email.service.js';
+import { emailVerificationEmail, passwordResetEmail, sendEmail } from './email.service.js';
 import { BadRequestError, ConflictError, NotFoundError, UnauthorizedError } from '../utils/errors.js';
 import { frmtSummaryFor } from './frmt.service.js';
 import type {
@@ -27,6 +28,7 @@ const PUBLIC_USER_SELECT = {
   name: true,
   username: true,
   email: true,
+  emailVerifiedAt: true,
   role: true,
   profilePublic: true,
   wins: true,
@@ -74,7 +76,71 @@ export async function register(input: RegisterInput) {
     select: PUBLIC_USER_SELECT,
   });
 
+  // Le code part des l'inscription, mais rien n'attend sa saisie : le joueur
+  // entre dans l'app immediatement, elle lui rappellera de confirmer.
+  await sendEmailVerification(user.id);
+
   return { user, ...(await issueSession(user)) };
+}
+
+// (Re)envoie un code de verification. Sans effet si l'adresse est deja
+// confirmee : inutile de demander deux fois la meme chose.
+export async function sendEmailVerification(userId: string): Promise<void> {
+  const user = await prisma.user.findUniqueOrThrow({
+    where: { id: userId },
+    select: { email: true, emailVerifiedAt: true },
+  });
+  if (user.emailVerifiedAt) return;
+
+  const { code, hash } = createResetCode();
+  await prisma.$transaction([
+    // Un seul code valable a la fois, comme pour le mot de passe oublie.
+    prisma.emailVerification.updateMany({ where: { userId, usedAt: null }, data: { usedAt: new Date() } }),
+    prisma.emailVerification.create({
+      data: {
+        userId,
+        codeHash: hash,
+        expiresAt: new Date(Date.now() + EMAIL_VERIFICATION_TTL_MINUTES * 60 * 1000),
+      },
+    }),
+  ]);
+
+  await sendEmail({ to: user.email, ...emailVerificationEmail(code, EMAIL_VERIFICATION_TTL_MINUTES) });
+}
+
+// Confirme l'adresse. Renvoie le profil a jour : l'app s'en sert pour faire
+// disparaitre le rappel sans recharger.
+export async function verifyEmail(userId: string, code: string) {
+  const invalid = new BadRequestError('Code invalide ou expire');
+
+  const verification = await prisma.emailVerification.findFirst({
+    where: { userId, usedAt: null },
+    orderBy: { createdAt: 'desc' },
+  });
+  if (!verification || verification.expiresAt.getTime() <= Date.now()) throw invalid;
+
+  if (verification.attempts >= RESET_MAX_ATTEMPTS) {
+    await prisma.emailVerification.update({ where: { id: verification.id }, data: { usedAt: new Date() } });
+    throw new BadRequestError('Trop d\'essais : demandez un nouveau code');
+  }
+
+  if (verification.codeHash !== hashResetCode(code)) {
+    await prisma.emailVerification.update({
+      where: { id: verification.id },
+      data: { attempts: { increment: 1 } },
+    });
+    throw invalid;
+  }
+
+  const [user] = await prisma.$transaction([
+    prisma.user.update({
+      where: { id: userId },
+      data: { emailVerifiedAt: new Date() },
+      select: PUBLIC_USER_SELECT,
+    }),
+    prisma.emailVerification.update({ where: { id: verification.id }, data: { usedAt: new Date() } }),
+  ]);
+  return user;
 }
 
 export async function login(input: LoginInput) {
@@ -213,11 +279,15 @@ export async function changeEmail(userId: string, input: ChangeEmailInput) {
   const taken = await prisma.user.findUnique({ where: { email: input.email }, select: { id: true } });
   if (taken && taken.id !== userId) throw new ConflictError('Email deja utilise');
 
-  return prisma.user.update({
+  // La nouvelle adresse n'est pas confirmee : sans cela, changer d'adresse
+  // apres verification viderait celle-ci de son sens.
+  const user = await prisma.user.update({
     where: { id: userId },
-    data: { email: input.email },
+    data: { email: input.email, emailVerifiedAt: null },
     select: PUBLIC_USER_SELECT,
   });
+  await sendEmailVerification(userId);
+  return user;
 }
 
 export async function changePassword(userId: string, input: ChangePasswordInput): Promise<void> {

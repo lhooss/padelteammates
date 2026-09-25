@@ -45,6 +45,9 @@ model User {
   // identifiant. C'est lui qui permet de designer le bon a l'invitation.
   username     String  @unique
   email        String  @unique
+  // Adresse confirmee par un code envoye a l'inscription. Null : pas encore
+  // verifiee. Rien n'est bloque pour autant, l'app se contente de le rappeler.
+  emailVerifiedAt DateTime?
   passwordHash String
   role         Role    @default(USER)
 
@@ -67,6 +70,7 @@ model User {
   refreshTokens  RefreshToken[]
   pushTokens     PushToken[]
   passwordResets PasswordReset[]
+  emailVerifications EmailVerification[]
 
   friendRequestsSent     Friendship[] @relation("FriendRequestsSent")
   friendRequestsReceived Friendship[] @relation("FriendRequestsReceived")
@@ -81,6 +85,23 @@ model User {
 // stockee ; il est court (6 chiffres) donc a duree de vie breve, a usage unique,
 // et le nombre d'essais est borne : sans cela, six chiffres se devinent.
 model PasswordReset {
+  id        String    @id @default(cuid())
+  codeHash  String
+  expiresAt DateTime
+  usedAt    DateTime?
+  attempts  Int       @default(0)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// Verification de l'adresse email, sur le meme principe que la reinitialisation
+// du mot de passe : code court, duree de vie breve, usage unique, essais bornes.
+model EmailVerification {
   id        String    @id @default(cuid())
   codeHash  String
   expiresAt DateTime

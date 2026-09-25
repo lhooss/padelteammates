@@ -12,6 +12,7 @@ import {
   resetPasswordSchema,
   updateProfileSchema,
   usernameCheckSchema,
+  verifyEmailSchema,
   type UsernameCheckInput,
 } from '@padelteammates/shared';
 import * as authService from '../services/auth.service.js';
@@ -106,6 +107,27 @@ authRouter.patch(
   asyncHandler(async (req, res) => {
     const user = await authService.updateProfile(req.auth!.userId, req.body);
     res.json(user);
+  }),
+);
+
+// Verification de l'adresse : le code part a l'inscription. Rien n'est bloque
+// tant qu'elle n'est pas faite, l'app se contente de la rappeler.
+authRouter.post(
+  '/verify-email',
+  requireAuth,
+  validate(verifyEmailSchema),
+  asyncHandler(async (req, res) => {
+    res.json(await authService.verifyEmail(req.auth!.userId, req.body.code));
+  }),
+);
+
+// Nouveau code, si le premier s'est perdu ou a expire.
+authRouter.post(
+  '/verify-email/send',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    await authService.sendEmailVerification(req.auth!.userId);
+    res.status(204).send();
   }),
 );
 

@@ -84,3 +84,38 @@ export function passwordResetEmail(code: string, minutes: number): Omit<Email, '
 
   return { subject: `Code de réinitialisation : ${code}`, html, text };
 }
+
+// Email de verification d'adresse, envoye a l'inscription. Le ton est different
+// de celui du mot de passe oublie : rien n'est bloque, on souhaite la bienvenue.
+export function emailVerificationEmail(code: string, minutes: number): Omit<Email, 'to'> {
+  const text = [
+    'Bienvenue sur Padelteammates.',
+    '',
+    `Votre code de vérification : ${code}`,
+    '',
+    `Il est valable ${minutes} minutes.`,
+    "Saisissez-le dans l'application pour confirmer votre adresse. Vous pouvez jouer sans attendre :",
+    'la vérification sert à pouvoir retrouver votre compte si vous oubliez votre mot de passe.',
+  ].join('\n');
+
+  const html = `<!doctype html>
+<html lang="fr"><body style="margin:0;padding:24px;background:#EDF2F8;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#0D1A33;line-height:1.6">
+  <div style="max-width:32rem;margin:0 auto;background:#fff;border-radius:18px;overflow:hidden">
+    <div style="background:#1F4FA0;padding:22px 24px">
+      <div style="color:#fff;font-size:22px;font-weight:800;letter-spacing:.5px;text-transform:uppercase">Padelteammates</div>
+    </div>
+    <div style="padding:24px">
+      <p style="margin:0 0 16px">Bienvenue ! Confirmez votre adresse pour sécuriser votre compte.</p>
+      <p style="margin:0 0 6px;font-size:13px;color:#5A6A86;text-transform:uppercase;letter-spacing:1.2px">Votre code</p>
+      <p style="margin:0 0 18px;font-size:36px;font-weight:800;letter-spacing:8px;color:#0D1A33">${code}</p>
+      <p style="margin:0 0 16px">Il est valable <strong>${minutes} minutes</strong>.</p>
+      <p style="margin:0;color:#5A6A86;font-size:14px">
+        Vous pouvez organiser vos matchs sans attendre : cette vérification sert à
+        pouvoir retrouver votre compte si vous oubliez votre mot de passe.
+      </p>
+    </div>
+  </div>
+</body></html>`;
+
+  return { subject: `Votre code de vérification : ${code}`, html, text };
+}
