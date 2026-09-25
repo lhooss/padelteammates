@@ -33,6 +33,22 @@ describe('Classement FRMT — lecture de la table', () => {
     ]);
   });
 
+  it('lit les rangs au-dela du millier, separes par une espace insecable', () => {
+    // Le site ecrit "1 001" avec une espace insecable (et l'espace fine pour
+    // l'evolution). Le rang n'etait alors pas reconnu et toute la ligne etait
+    // rejetee : l'import s'arretait de fait au millieme joueur.
+    const { rows } = parseFrmtTable(
+      tableXml(2, [
+        ['1 001', '+1 024', 'TAZI OMAR [1999] (IND)', '120,5'],
+        ['1 002', '-', 'IDRISSI AMINE [2003] (COC)', '119,0'],
+      ]),
+    );
+    expect(rows.map((r) => [r.rank, r.evolution])).toEqual([
+      [1001, 1024],
+      [1002, null],
+    ]);
+  });
+
   it('ignore les lignes illisibles et renvoie 0 sans table', () => {
     expect(parseFrmtTable(tableXml(1, [['1', '-', 'SANS ANNEE NI CLUB', '10,0']])).rows).toEqual([]);
     expect(parseFrmtTable('<WAJAX></WAJAX>')).toEqual({ total: 0, rows: [] });

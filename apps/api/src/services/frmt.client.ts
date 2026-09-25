@@ -84,7 +84,8 @@ async function openSession(fetchImpl: typeof fetch): Promise<Session> {
   };
 }
 
-// Classement complet d'une categorie, tranche par tranche, jusqu'a une tranche vide.
+// Classement complet d'une categorie : les tranches du filtre A18, l'une apres
+// l'autre, jusqu'a la premiere vide (au-dela du dernier joueur classe).
 export async function fetchFrmtCategory(category: FrmtCategory, options: FrmtClientOptions = {}): Promise<FrmtRow[]> {
   const { fetchImpl = fetch, delayMs = 400 } = options;
   const pause = () => new Promise((resolve) => setTimeout(resolve, delayMs));
@@ -108,6 +109,7 @@ export async function fetchFrmtCategory(category: FrmtCategory, options: FrmtCli
       tranche.push(...page);
       if (page.length === 0 || tranche.length >= total) break;
     }
+    // Plus aucune ligne : on a depasse le dernier joueur classe.
     if (tranche.length === 0) break;
     rows.push(...tranche);
   }
@@ -126,6 +128,12 @@ export async function fetchFrmtCategory(category: FrmtCategory, options: FrmtCli
 
 // "NOM PRENOM [2002] (IND)" : nom, annee de naissance, code club.
 const LABEL_RE = /^(.+?)\s*(?:\[(\d{4})\])?\s*(?:\(([^)]*)\))?$/;
+// Au-dela du millier, le site separe les milliers par une espace insecable
+// ("1 001"). Le rang n'etait alors pas reconnu et la ligne entiere etait
+// rejetee : l'import s'arretait de fait au millieme joueur. \s couvre aussi
+// bien l'espace insecable que l'espace fine du site.
+const RANK_RE = /^\d[\d\s]*$/;
+const EVOLUTION_RE = /^([+-])(\d[\d\s]*)$/;
 const NUMBER_RE = /^\d[\d\s  ]*(?:,\d+)?$/;
 
 export function parseFrmtTable(xml: string): { total: number; rows: FrmtRow[] } {
@@ -152,17 +160,17 @@ function parseLine(cells: string[]): FrmtRow | null {
   if (labelIndex < 0) return null;
   const label = LABEL_RE.exec(cells[labelIndex]!);
   const before = cells.slice(0, labelIndex);
-  const rank = before.find((c) => /^\d+$/.test(c));
+  const rank = before.find((c) => RANK_RE.test(c));
   const points = cells
     .slice(labelIndex + 1)
     .reverse()
     .find((c) => NUMBER_RE.test(c));
   if (!label?.[1] || !rank || !points) return null;
 
-  const evolution = before.find((c) => /^[+-]\d+$/.test(c));
+  const evolution = before.map((c) => EVOLUTION_RE.exec(c)).find((m) => m !== null);
   return {
-    rank: Number(rank),
-    evolution: evolution ? Number(evolution) : null,
+    rank: Number(rank.replace(/\s/g, '')),
+    evolution: evolution ? Number(evolution[1] + evolution[2]!.replace(/\s/g, '')) : null,
     fullName: label[1].replace(/\s+/g, ' ').trim(),
     birthYear: label[2] ? Number(label[2]) : null,
     club: label[3]?.trim() || null,
